@@ -1,0 +1,19 @@
+name = "ai-orchestrator-api"
+main = "worker/index.js"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Worker will be available at:
+# https://ai-orchestrator-api.YOUR_SUBDOMAIN.workers.dev
+# Or bind to custom domain in Cloudflare Dashboard
+
+[vars]
+# Non-secret vars (override in Dashboard for secrets)
+JIRA_PROJECT = "ACOLDP"
+JIRA_DOMAIN  = "avburshtein.atlassian.net"
+JIRA_EMAIL   = "av.burshtein@gmail.com"
+
+# Secrets (set via Dashboard → Settings → Variables → Add Secret):
+# SECRET_KEY
+# GEMINI_API_KEY
+# JIRA_TOKEN

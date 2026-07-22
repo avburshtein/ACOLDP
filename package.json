@@ -1,0 +1,14 @@
+{
+  "name": "ai-orchestrator",
+  "version": "1.0.0",
+  "description": "AI Context Orchestrator for ACOLDP — Jira + Gemini + Cloudflare",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev worker/index.js",
+    "deploy:worker": "wrangler deploy worker/index.js",
+    "deploy:pages": "wrangler pages deploy src/ui --project-name=ai-orchestrator-ui"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}
