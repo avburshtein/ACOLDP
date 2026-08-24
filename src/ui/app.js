@@ -31,6 +31,7 @@ const settingsModal = $("settings-modal");
 const settingsClose = $("settings-close");
 const settingsCancel = $("settings-cancel");
 const settingsSave  = $("settings-save");
+const loadProjectsBtn = $("cfg-jira-load-projects");
 const cfgProvider   = $("cfg-provider");
 const baseUrlGroup  = $("base-url-group");
 const resultsPlaceholder = $("results-placeholder");
@@ -352,9 +353,56 @@ function download(filename, content, type) {
 }
 
 // ── Settings ──────────────────────────────────────────────────
-settingsBtn.addEventListener("click",    () => settingsModal.classList.remove("hidden"));
+settingsBtn.addEventListener("click", () => {
+  settingsModal.classList.remove("hidden");
+  // Auto-load Jira projects if credentials are already filled in
+  const cfg = getConfig();
+  if (cfg.jira_domain && cfg.jira_email && cfg.jira_token) loadJiraProjects();
+});
 settingsClose.addEventListener("click",  () => settingsModal.classList.add("hidden"));
 settingsCancel.addEventListener("click", () => settingsModal.classList.add("hidden"));
+
+loadProjectsBtn?.addEventListener("click", loadJiraProjects);
+
+async function loadJiraProjects() {
+  const cfg = getConfig();
+  const workerUrl = localStorage.getItem("acoldp_worker_url") || "";
+  if (!workerUrl) { showStatusBadge("Укажите Worker API URL"); return; }
+  if (!cfg.jira_domain || !cfg.jira_email || !cfg.jira_token) {
+    showStatusBadge("Заполните Jira Domain, Email и Token"); return;
+  }
+
+  loadProjectsBtn.disabled = true;
+  const sel = $("cfg-jira-project");
+  const previouslySelected = sel.value || localStorage.getItem("acoldp_cfg_jira-project") || "";
+  sel.innerHTML = `<option value="">Загрузка…</option>`;
+
+  try {
+    const res = await fetch(workerUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Secret-Key": state.password },
+      body: JSON.stringify({ mode: "JIRA_PROJECTS", user_config: cfg })
+    });
+    const data = await res.json();
+    if (res.status === 401) { logoutBtn.click(); throw new Error("Неверный пароль"); }
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+    const projects = data.projects || [];
+    sel.innerHTML = `<option value="">— выберите проект —</option>` +
+      projects.map(p => `<option value="${escAttr(p.key)}">${escHtml(p.key)} · ${escHtml(p.name)}</option>`).join("");
+
+    if (previouslySelected && projects.some(p => p.key === previouslySelected)) {
+      sel.value = previouslySelected;
+    }
+    showStatusBadge(projects.length ? `✓ Проектов: ${projects.length}` : "Проекты не найдены");
+  } catch (err) {
+    sel.innerHTML = `<option value="">— ошибка загрузки —</option>`;
+    showStatusBadge("Ошибка загрузки проектов");
+    console.error(err);
+  } finally {
+    loadProjectsBtn.disabled = false;
+  }
+}
 
 cfgProvider.addEventListener("change", () => {
   baseUrlGroup.classList.toggle("hidden", cfgProvider.value !== "custom");
@@ -396,4 +444,8 @@ function escHtml(str) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+function escAttr(str) {
+  return escHtml(str).replace(/"/g, "&quot;");
 }

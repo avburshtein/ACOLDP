@@ -12,7 +12,7 @@
 // ============================================================
 
 import { callLLM } from "../src/api/gemini.js";
-import { fetchOpenTickets, processAction } from "../src/api/jira.js";
+import { fetchProjects, fetchOpenTickets, processAction } from "../src/api/jira.js";
 import {
   REPORT_SYSTEM_INSTRUCTION,
   DEDUP_SYSTEM_INSTRUCTION,
@@ -46,15 +46,11 @@ export default {
       const body = await request.json();
       const { raw_text, mode, selected_model, user_config: uCfg = {} } = body;
 
-      if (!raw_text) throw new Error("raw_text is required");
-
       // Resolve config: UI settings override env vars
       const provider = uCfg.provider || "google";
       const baseUrl  = uCfg.base_url || "";
       const apiKey   = uCfg.api_key  || env.GEMINI_API_KEY;
       const model    = selected_model || "AUTO";
-
-      if (!apiKey) throw new Error("API Key не задан. Откройте ⚙️ Settings.");
 
       const jiraCfg = {
         domain:  uCfg.jira_domain  || env.JIRA_DOMAIN,
@@ -62,6 +58,17 @@ export default {
         email:   uCfg.jira_email   || env.JIRA_EMAIL,
         token:   uCfg.jira_token   || env.JIRA_TOKEN
       };
+
+      // ── MODE: JIRA_PROJECTS ─────────────────────────────────
+      // Returns the list of accessible Jira projects for the dropdown.
+      // Does NOT require raw_text or an LLM key.
+      if (mode === "JIRA_PROJECTS") {
+        const projects = await fetchProjects(jiraCfg);
+        return json({ success: true, projects });
+      }
+
+      if (!raw_text) throw new Error("raw_text is required");
+      if (!apiKey) throw new Error("API Key не задан. Откройте ⚙️ Settings.");
 
       // ── MODE: REPORT ────────────────────────────────────────
       if (mode === "REPORT") {

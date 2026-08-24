@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "AI Context Orchestrator for ACOLDP — Jira + Gemini + Cloudflare",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "wrangler dev worker/index.js",
     "deploy:worker": "wrangler deploy worker/index.js",

@@ -166,8 +166,15 @@
 
         <div class="grid grid-cols-2 gap-3">
           <div class="settings-group">
-            <label class="settings-label">Project Key</label>
-            <input type="text" id="cfg-jira-project" class="input-full" placeholder="ACOLDP">
+            <label class="settings-label">Project</label>
+            <div class="flex gap-2">
+              <select id="cfg-jira-project" class="select-full flex-1">
+                <option value="">— выберите проект —</option>
+              </select>
+              <button id="cfg-jira-load-projects" type="button" class="btn-ghost px-3 text-sm shrink-0" title="Загрузить список проектов из Jira">
+                <span class="material-symbols-outlined text-[16px]">refresh</span>
+              </button>
+            </div>
           </div>
           <div class="settings-group">
             <label class="settings-label">User Email</label>

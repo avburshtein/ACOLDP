@@ -3,6 +3,29 @@
 // ============================================================
 
 /**
+ * Fetch all accessible Jira projects (for the project selector dropdown)
+ */
+export async function fetchProjects(cfg) {
+  if (!cfg.domain || !cfg.token) return [];
+
+  const auth = basicAuth(cfg.email, cfg.token);
+  const url = `https://${cfg.domain}/rest/api/2/project`;
+
+  try {
+    const res = await fetch(url, {
+      headers: { "Authorization": auth, "Accept": "application/json" }
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (Array.isArray(data) ? data : [])
+      .map(p => ({ key: p.key, name: p.name || p.key }))
+      .sort((a, b) => a.key.localeCompare(b.key));
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Fetch all open Jira tickets for deduplication context
  */
 export async function fetchOpenTickets(cfg) {
