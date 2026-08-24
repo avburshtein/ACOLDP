@@ -51,7 +51,7 @@ const charLimit     = $("char-limit");
 document.addEventListener("DOMContentLoaded", () => {
   // Auth — only required when a Worker URL is configured (demo mode needs no password)
   const saved = localStorage.getItem("acoldp_password");
-  const hasWorker = !!localStorage.getItem("acoldp_worker_url");
+  const hasWorker = !!localStorage.getItem("acoldp_cfg_worker-url");
   if (saved) { state.password = saved; hideAuth(); }
   else if (!hasWorker) { hideAuth(); } // demo mode — no auth barrier
 
@@ -181,7 +181,7 @@ async function sendRequest(mode) {
   setLoading(true);
 
   // ── Demo mode: no Worker URL configured → show pre-baked result ──
-  const workerUrl = localStorage.getItem("acoldp_worker_url") || "";
+  const workerUrl = localStorage.getItem("acoldp_cfg_worker-url") || "";
   if (!workerUrl) {
     try {
       if (mode === "REPORT") {
@@ -431,7 +431,7 @@ loadProjectsBtn?.addEventListener("click", loadJiraProjects);
 
 async function loadJiraProjects() {
   const cfg = getConfig();
-  const workerUrl = localStorage.getItem("acoldp_worker_url") || "";
+  const workerUrl = localStorage.getItem("acoldp_cfg_worker-url") || "";
   if (!workerUrl) { showStatusBadge("Укажите Worker API URL"); return; }
   if (!cfg.jira_domain || !cfg.jira_email || !cfg.jira_token) {
     showStatusBadge("Заполните Jira Domain, Email и Token"); return;
