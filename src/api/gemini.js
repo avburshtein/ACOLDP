@@ -60,16 +60,20 @@ async function callGeminiModel(apiKey, modelName, systemPrompt, userText, hasSch
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
+      const genConfig = {};
+      // Skip thinkingConfig for older/lightweight models — they don't support it
+      if (!modelName.includes("lite") && !modelName.includes("1.5") && !modelName.includes("1.0")) {
+        genConfig.thinkingConfig = { thinkingBudget: 0 };
+      }
+      if (hasSchema) {
+        genConfig.response_mime_type = "application/json";
+        genConfig.response_schema = schema;
+      }
+
       const body = {
         system_instruction: { parts: [{ text: systemPrompt }] },
         contents: [{ parts: [{ text: userText }] }],
-        generationConfig: {
-          thinkingConfig: { thinkingBudget: 0 },
-          ...(hasSchema && {
-            response_mime_type: "application/json",
-            response_schema: schema
-          })
-        }
+        generationConfig: genConfig
       };
 
       const res = await fetch(url, {
@@ -78,18 +82,34 @@ async function callGeminiModel(apiKey, modelName, systemPrompt, userText, hasSch
         body: JSON.stringify(body)
       });
 
+      // 400 INVALID_ARGUMENT — retry without thinkingConfig
+      if (res.status === 400 && genConfig.thinkingConfig) {
+        const errText = await res.text();
+        if (errText.includes("INVALID_ARGUMENT")) {
+          const res2 = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...body, generationConfig: { response_mime_type: genConfig.response_mime_type, response_schema: genConfig.response_schema } })
+          });
+          if (!res2.ok) {
+            const errText2 = await res2.text();
+            throw new Error(`[${modelName}] ${res2.status}: ${errText2.slice(0, 200)}`);
+          }
+          const data2 = await res2.json();
+          const text2 = data2.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text2) return text2;
+          throw new Error(`[${modelName}] пустой ответ`);
+        }
+        throw new Error(`[${modelName}] ${res.status}: ${errText.slice(0, 200)}`);
+      }
+
       if (res.status === 503) {
         if (attempt < 2) { await sleep(1500); continue; }
         throw new Error(`[${modelName}] 503 перегрузка`);
       }
 
-      if (res.status === 429) {
-        throw new Error(`[${modelName}] 429 квота исчерпана`);
-      }
-
-      if (res.status === 404) {
-        throw new Error(`[${modelName}] 404 модель не найдена`);
-      }
+      if (res.status === 429) throw new Error(`[${modelName}] 429 квота исчерпана`);
+      if (res.status === 404) throw new Error(`[${modelName}] 404 модель не найдена`);
 
       if (!res.ok) {
         const errText = await res.text();
