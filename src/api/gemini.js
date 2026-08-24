@@ -3,12 +3,10 @@
 // Supports: Google Gemini (native) + OpenAI-compatible APIs
 // ============================================================
 
-// Fallback chain for Google — ordered by speed & quota isolation
+// Fallback chain for Google — only verified production models
 const GOOGLE_FALLBACK_MODELS = [
   "gemini-2.5-flash",
-  "gemini-2.5-flash-lite",
   "gemini-2.0-flash",
-  "gemini-2.0-flash-lite",
 ];
 
 /**
@@ -92,7 +90,7 @@ async function callGoogle(apiKey, model, systemPrompt, userText, schema) {
     }
   }
 
-  throw new Error(`Google API: все модели недоступны. Последняя ошибка: ${lastError}`);
+  throw new Error(`Google API: все модели недоступны (${lastError}). Проверьте API-ключ в Google AI Studio: https://aistudio.google.com/apikey`);
 }
 
 // ── OpenAI-Compatible (Alibaba/Qwen, OpenAI, Custom) ────────

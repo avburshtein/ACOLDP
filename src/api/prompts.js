@@ -36,6 +36,8 @@ Deduplication rules:
 - Similarity 60-85% → CREATE as Sub-task linked to similar ticket
 - Similarity <60% → CREATE new ticket
 - Resolved bugs mentioned again → CREATE new ticket (regression)
+- **CRITICAL: If existing tickets list is EMPTY or contains no semantically similar items → CREATE every actionable item from the input as a separate ticket. Do NOT skip or merge distinct items.**
+- Each actionable item from "Задачи для синхронизации с Jira" / "Задачи на следующий день" section MUST become its own action.
 - Always output in Russian for summary/description fields`;
 
 export const DEDUP_JSON_SCHEMA = {
