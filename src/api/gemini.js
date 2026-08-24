@@ -3,18 +3,12 @@
 // Supports: Google Gemini (native) + OpenAI-compatible APIs
 // ============================================================
 
-// Fallback chain for Google — only verified production models
-const GOOGLE_FALLBACK_MODELS = [
-  "gemini-2.0-flash",
-  "gemini-1.5-flash",
-];
-
 /**
  * Universal LLM caller with provider switching and fallback
  * @param {string} provider - 'google' | 'alibaba' | 'openai' | 'custom'
  * @param {string} baseUrl  - Custom base URL (for 'custom' provider)
  * @param {string} apiKey   - API key
- * @param {string} model    - Model name or 'AUTO' for fallback chain
+ * @param {string} model    - Model name or 'AUTO' for auto-discovery
  * @param {string} systemPrompt - System instruction
  * @param {string} userText - User input
  * @param {object} schema   - JSON schema for structured output (optional)
@@ -30,69 +24,115 @@ export async function callLLM(provider, baseUrl, apiKey, model, systemPrompt, us
 
 // ── Google Gemini (Native API) ───────────────────────────────
 async function callGoogle(apiKey, model, systemPrompt, userText, schema) {
-  const models = (model && model !== "AUTO")
-    ? [model]
-    : GOOGLE_FALLBACK_MODELS;
-
   const hasSchema = schema && Object.keys(schema).length > 0;
 
+  // ── If user specified a model → use it directly (single attempt, no fallback) ──
+  if (model && model !== "AUTO") {
+    return callGeminiModel(apiKey, model, systemPrompt, userText, hasSchema, schema);
+  }
+
+  // ── AUTO: discover available models dynamically from the API key ──
+  const availableModels = await fetchAvailableGeminiModels(apiKey);
+  if (availableModels.length === 0) {
+    throw new Error("Gemini: не найдено ни одной доступной модели. Проверьте ключ: https://aistudio.google.com/apikey");
+  }
+
+  // Prefer flash models, sorted by recency (higher generation = preferred)
+  const flashModels = availableModels.filter(m => m.includes("flash"));
+  const candidates = flashModels.length > 0 ? flashModels : availableModels;
+
   let lastError = "";
-
-  for (const m of models) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`;
-
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      try {
-        const body = {
-          system_instruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ parts: [{ text: userText }] }],
-          generationConfig: {
-            thinkingConfig: { thinkingBudget: 0 }, // disable thinking for speed
-            ...(hasSchema && {
-              response_mime_type: "application/json",
-              response_schema: schema
-            })
-          }
-        };
-
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body)
-        });
-
-        // Overloaded — wait and retry
-        if (res.status === 503) {
-          lastError = `[${m}] 503 перегрузка`;
-          await sleep(1500);
-          continue;
-        }
-
-        // Quota exhausted or model not found — try next model
-        if (res.status === 429 || res.status === 404) {
-          const reason = res.status === 429 ? "квота исчерпана" : "модель не найдена";
-          lastError = `[${m}] ${res.status} ${reason}`;
-          break;
-        }
-
-        if (!res.ok) {
-          const errText = await res.text();
-          lastError = `[${m}] ${res.status}: ${errText.slice(0, 200)}`;
-          break;
-        }
-
-        const data = await res.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) return text;
-
-        lastError = `[${m}] Empty response`;
-      } catch (e) {
-        lastError = e.message;
-      }
+  for (const m of candidates) {
+    try {
+      return await callGeminiModel(apiKey, m, systemPrompt, userText, hasSchema, schema);
+    } catch (e) {
+      lastError = e.message;
+      // If this model is overloaded/quota-exceeded, try next
+      if (!lastError.includes("503") && !lastError.includes("429")) throw e;
     }
   }
 
-  throw new Error(`Gemini: все модели недоступны (${lastError}). Проверьте ключ: https://aistudio.google.com/apikey`);
+  throw new Error(`Gemini: все модели недоступны (${lastError})`);
+}
+
+async function callGeminiModel(apiKey, modelName, systemPrompt, userText, hasSchema, schema) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const body = {
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ parts: [{ text: userText }] }],
+        generationConfig: {
+          thinkingConfig: { thinkingBudget: 0 },
+          ...(hasSchema && {
+            response_mime_type: "application/json",
+            response_schema: schema
+          })
+        }
+      };
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+
+      if (res.status === 503) {
+        if (attempt < 2) { await sleep(1500); continue; }
+        throw new Error(`[${modelName}] 503 перегрузка`);
+      }
+
+      if (res.status === 429) {
+        throw new Error(`[${modelName}] 429 квота исчерпана`);
+      }
+
+      if (res.status === 404) {
+        throw new Error(`[${modelName}] 404 модель не найдена`);
+      }
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`[${modelName}] ${res.status}: ${errText.slice(0, 200)}`);
+      }
+
+      const data = await res.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (text) return text;
+      throw new Error(`[${modelName}] пустой ответ`);
+    } catch (e) {
+      if (attempt < 2 && (e.message.includes("503") || e.message.includes("перегрузка"))) continue;
+      throw e;
+    }
+  }
+
+  throw new Error(`[${modelName}] все попытки исчерпаны`);
+}
+
+// ── Dynamic model discovery ──────────────────────────────────
+async function fetchAvailableGeminiModels(apiKey) {
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const models = (data.models || [])
+      .filter(m => m.supportedGenerationMethods?.includes("generateContent"))
+      .map(m => m.name.replace("models/", ""))
+      .filter(name => !name.includes("vision") && !name.includes("embedding") && !name.includes("aqa"))
+      // Sort: flash first, then by generation number descending
+      .sort((a, b) => {
+        const aFlash = a.includes("flash") ? 1 : 0;
+        const bFlash = b.includes("flash") ? 1 : 0;
+        if (aFlash !== bFlash) return bFlash - aFlash;
+        return b.localeCompare(a); // higher version first
+      });
+    return models;
+  } catch (e) {
+    console.error("Failed to fetch Gemini models:", e.message);
+    return [];
+  }
 }
 
 // ── OpenAI-Compatible (Alibaba/Qwen, OpenAI, Custom) ────────
