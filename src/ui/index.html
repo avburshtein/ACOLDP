@@ -60,14 +60,18 @@
             <span class="material-symbols-outlined text-[14px]">play_arrow</span>
             Демо
           </button>
-          <select id="model-select" class="select-sm">
-            <option value="AUTO">🤖 Авто (Fallback)</option>
+          <input type="text" id="model-select" class="select-sm" 
+            placeholder="AUTO" 
+            list="model-suggestions"
+            title="Введите имя модели (или оставьте AUTO для авто-выбора)">
+          <datalist id="model-suggestions">
+            <option value="AUTO">
             <option value="gemini-2.5-flash">⚡ Gemini 2.5 Flash</option>
             <option value="gemini-2.5-flash-lite">🪶 Gemini 2.5 Flash-Lite</option>
             <option value="gemini-2.0-flash">💨 Gemini 2.0 Flash</option>
             <option value="qwen-max">🐉 Qwen Max</option>
             <option value="gpt-4o-mini">🧠 GPT-4o Mini</option>
-          </select>
+          </datalist>
         </div>
       </div>
 

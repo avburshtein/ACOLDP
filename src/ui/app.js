@@ -479,6 +479,13 @@ settingsSave.addEventListener("click", () => {
     localStorage.setItem(`acoldp_cfg_${k}`, $(`cfg-${k}`)?.value || "");
   });
   settingsModal.classList.add("hidden");
+
+  // If Worker URL was just set and user is not authenticated → show auth overlay
+  const hasWorker = !!localStorage.getItem("acoldp_cfg_worker-url");
+  if (hasWorker && !state.password) {
+    authOverlay.classList.remove("hidden");
+  }
+
   showStatusBadge("✓ Настройки сохранены");
 });
 
