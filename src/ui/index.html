@@ -12,18 +12,54 @@
 </head>
 <body class="bg-[#0d1321] text-[#dce2f5] font-inter overflow-hidden h-screen flex flex-col">
 
-  <!-- Auth Overlay -->
+  <!-- Auth / Session Setup Overlay -->
   <div id="auth-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-    <form id="auth-form" class="bg-[#141425] border border-white/10 rounded-2xl p-8 w-full max-w-sm flex flex-col gap-5 shadow-2xl">
+    <form id="auth-form" class="bg-[#141425] border border-white/10 rounded-2xl p-8 w-full max-w-md flex flex-col gap-4 shadow-2xl">
       <div class="text-center">
         <div class="text-3xl mb-2">⚡</div>
         <h2 class="text-xl font-bold text-white">ACOLDP Orchestrator</h2>
-        <p class="text-sm text-white/50 mt-1">Введите пароль доступа</p>
+        <p class="text-sm text-white/50 mt-1">Подключите свои API-ключи</p>
       </div>
-      <input type="password" id="auth-input" autocomplete="current-password"
-        class="bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-center text-white focus:outline-none focus:border-blue-400 transition"
-        placeholder="Пароль...">
-      <button type="submit" class="btn-primary py-3 rounded-xl font-semibold">Войти</button>
+
+      <div class="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 text-xs text-yellow-200/80">
+        ⚠️ Ключи хранятся <strong>только в памяти браузера</strong> и исчезнут при закрытии вкладки.
+        Ответственность за сохранность ключей лежит на вас.
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="text-xs text-white/50 mb-1 block">LLM API Key</label>
+          <input type="password" id="session-api-key" autocomplete="off"
+            class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-400 transition"
+            placeholder="AIza... или sk-...">
+        </div>
+        <div>
+          <label class="text-xs text-white/50 mb-1 block">Jira Domain</label>
+          <input type="text" id="session-jira-domain" autocomplete="off"
+            class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-400 transition"
+            placeholder="your-domain.atlassian.net">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs text-white/50 mb-1 block">Jira Email</label>
+            <input type="email" id="session-jira-email" autocomplete="off"
+              class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-400 transition"
+              placeholder="user@gmail.com">
+          </div>
+          <div>
+            <label class="text-xs text-white/50 mb-1 block">Jira Token</label>
+            <input type="password" id="session-jira-token" autocomplete="off"
+              class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-400 transition"
+              placeholder="ATATT3x...">
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-primary py-3 rounded-xl font-semibold mt-2">Начать сессию</button>
+
+      <p class="text-[11px] text-white/30 text-center mt-1">
+        Без ключей доступен только <strong>демо-режим</strong> — нажмите «Демо» после начала сессии.
+      </p>
     </form>
   </div>
 
@@ -163,11 +199,6 @@
           </select>
         </div>
 
-        <div class="settings-group">
-          <label class="settings-label">API Key</label>
-          <input type="password" id="cfg-api-key" class="input-full" placeholder="Введите API Key...">
-        </div>
-
         <div class="settings-group hidden" id="base-url-group">
           <label class="settings-label">Base URL</label>
           <input type="text" id="cfg-base-url" class="input-full" placeholder="https://api.example.com/v1">
@@ -176,31 +207,15 @@
         <div class="divider"></div>
 
         <div class="settings-group">
-          <label class="settings-label">Jira Domain</label>
-          <input type="text" id="cfg-jira-domain" class="input-full" placeholder="domain.atlassian.net">
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
-          <div class="settings-group">
-            <label class="settings-label">Project</label>
-            <div class="flex gap-2">
-              <select id="cfg-jira-project" class="select-full flex-1">
-                <option value="">— выберите проект —</option>
-              </select>
-              <button id="cfg-jira-load-projects" type="button" class="btn-ghost px-3 text-sm shrink-0" title="Загрузить список проектов из Jira">
-                <span class="material-symbols-outlined text-[16px]">refresh</span>
-              </button>
-            </div>
+          <label class="settings-label">Jira Project</label>
+          <div class="flex gap-2">
+            <select id="cfg-jira-project" class="select-full flex-1">
+              <option value="">— выберите проект —</option>
+            </select>
+            <button id="cfg-jira-load-projects" type="button" class="btn-ghost px-3 text-sm shrink-0" title="Загрузить список проектов из Jira">
+              <span class="material-symbols-outlined text-[16px]">refresh</span>
+            </button>
           </div>
-          <div class="settings-group">
-            <label class="settings-label">User Email</label>
-            <input type="email" id="cfg-jira-email" class="input-full" placeholder="user@gmail.com">
-          </div>
-        </div>
-
-        <div class="settings-group">
-          <label class="settings-label">Jira API Token</label>
-          <input type="password" id="cfg-jira-token" class="input-full" placeholder="ATATT3x...">
         </div>
 
         <div class="settings-group">

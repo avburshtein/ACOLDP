@@ -9,7 +9,10 @@ const MAX_INPUT_CHARS = 15000;
 
 // ── State ────────────────────────────────────────────────────
 const state = {
-  password: "",
+  apiKey: "",
+  jiraDomain: "",
+  jiraEmail: "",
+  jiraToken: "",
   lastReport: "",
   processingTimer: null,
   processingSeconds: 0
@@ -20,7 +23,10 @@ const $ = id => document.getElementById(id);
 
 const authOverlay   = $("auth-overlay");
 const authForm      = $("auth-form");
-const authInput     = $("auth-input");
+const sessApiKey    = $("session-api-key");
+const sessJiraDomain = $("session-jira-domain");
+const sessJiraEmail = $("session-jira-email");
+const sessJiraToken = $("session-jira-token");
 const inputArea     = $("input-area");
 const modelSelect   = $("model-select");
 const reportBtn     = $("report-btn");
@@ -49,11 +55,14 @@ const charLimit     = $("char-limit");
 
 // ── Init ─────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
-  // Auth — only required when a Worker URL is configured (demo mode needs no password)
-  const saved = localStorage.getItem("acoldp_password");
+  // Session setup — required when Worker URL is configured
   const hasWorker = !!localStorage.getItem("acoldp_cfg_worker-url");
-  if (saved) { state.password = saved; hideAuth(); }
-  else if (!hasWorker) { hideAuth(); } // demo mode — no auth barrier
+  if (hasWorker) {
+    // Show session setup overlay — keys never persist to localStorage
+    authOverlay.classList.remove("hidden");
+  } else {
+    hideAuth(); // demo mode — no Worker, no auth
+  }
 
   // Draft
   const draft = localStorage.getItem("acoldp_draft");
@@ -66,22 +75,32 @@ document.addEventListener("DOMContentLoaded", () => {
   loadSettings();
 });
 
-// ── Auth ─────────────────────────────────────────────────────
+// ── Session Setup ────────────────────────────────────────────
 authForm.addEventListener("submit", e => {
   e.preventDefault();
-  const pass = authInput.value.trim();
-  if (!pass) return;
-  state.password = pass;
-  localStorage.setItem("acoldp_password", pass);
+  const apiKey = sessApiKey.value.trim();
+  if (!apiKey) { showStatusBadge("Введите LLM API Key"); return; }
+  state.apiKey = apiKey;
+  state.jiraDomain = sessJiraDomain.value.trim();
+  state.jiraEmail = sessJiraEmail.value.trim();
+  state.jiraToken = sessJiraToken.value.trim();
   hideAuth();
   inputArea.focus();
+
+  // Clear sensitive fields from DOM
+  sessApiKey.value = "";
+  sessJiraToken.value = "";
+
+  showStatusBadge("✓ Сессия начата. Ключи в памяти браузера.");
 });
 
 logoutBtn.addEventListener("click", () => {
-  localStorage.removeItem("acoldp_password");
-  state.password = "";
-  authInput.value = "";
+  state.apiKey = "";
+  state.jiraDomain = "";
+  state.jiraEmail = "";
+  state.jiraToken = "";
   authOverlay.classList.remove("hidden");
+  showStatusBadge("✓ Сессия завершена. Ключи удалены из памяти.");
 });
 
 function hideAuth() {
@@ -202,8 +221,7 @@ async function sendRequest(mode) {
     const res = await fetch(workerUrl, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "X-Secret-Key": state.password
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
         raw_text: text,
@@ -215,7 +233,6 @@ async function sendRequest(mode) {
 
     const data = await res.json();
 
-    if (res.status === 401) { logoutBtn.click(); throw new Error("Неверный пароль"); }
     if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
 
     if (mode === "REPORT") {
@@ -434,7 +451,7 @@ async function loadJiraProjects() {
   const workerUrl = localStorage.getItem("acoldp_cfg_worker-url") || "";
   if (!workerUrl) { showStatusBadge("Укажите Worker API URL"); return; }
   if (!cfg.jira_domain || !cfg.jira_email || !cfg.jira_token) {
-    showStatusBadge("Заполните Jira Domain, Email и Token"); return;
+    showStatusBadge("Заполните Jira-креды при входе в сессию"); return;
   }
 
   loadProjectsBtn.disabled = true;
@@ -445,11 +462,10 @@ async function loadJiraProjects() {
   try {
     const res = await fetch(workerUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-Secret-Key": state.password },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ mode: "JIRA_PROJECTS", user_config: cfg })
     });
     const data = await res.json();
-    if (res.status === 401) { logoutBtn.click(); throw new Error("Неверный пароль"); }
     if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
 
     const projects = data.projects || [];
@@ -474,15 +490,16 @@ cfgProvider.addEventListener("change", () => {
 });
 
 settingsSave.addEventListener("click", () => {
-  const keys = ["provider","api-key","base-url","jira-domain","jira-project","jira-email","jira-token","worker-url"];
+  // Save only non-sensitive settings to localStorage
+  const keys = ["provider","base-url","jira-project","worker-url"];
   keys.forEach(k => {
     localStorage.setItem(`acoldp_cfg_${k}`, $(`cfg-${k}`)?.value || "");
   });
   settingsModal.classList.add("hidden");
 
-  // If Worker URL was just set and user is not authenticated → show auth overlay
+  // If Worker URL was just set → show session setup overlay
   const hasWorker = !!localStorage.getItem("acoldp_cfg_worker-url");
-  if (hasWorker && !state.password) {
+  if (hasWorker && !state.apiKey) {
     authOverlay.classList.remove("hidden");
   }
 
@@ -490,7 +507,7 @@ settingsSave.addEventListener("click", () => {
 });
 
 function loadSettings() {
-  const keys = ["provider","api-key","base-url","jira-domain","jira-project","jira-email","jira-token","worker-url"];
+  const keys = ["provider","base-url","jira-project","worker-url"];
   keys.forEach(k => {
     const el = $(`cfg-${k}`);
     if (el) el.value = localStorage.getItem(`acoldp_cfg_${k}`) || "";
@@ -501,12 +518,12 @@ function loadSettings() {
 function getConfig() {
   return {
     provider:     localStorage.getItem("acoldp_cfg_provider")     || "google",
-    api_key:      localStorage.getItem("acoldp_cfg_api-key")      || "",
+    api_key:      state.apiKey,
     base_url:     localStorage.getItem("acoldp_cfg_base-url")     || "",
-    jira_domain:  localStorage.getItem("acoldp_cfg_jira-domain")  || "",
+    jira_domain:  state.jiraDomain,
     jira_project: localStorage.getItem("acoldp_cfg_jira-project") || "",
-    jira_email:   localStorage.getItem("acoldp_cfg_jira-email")   || "",
-    jira_token:   localStorage.getItem("acoldp_cfg_jira-token")   || ""
+    jira_email:   state.jiraEmail,
+    jira_token:   state.jiraToken
   };
 }
 

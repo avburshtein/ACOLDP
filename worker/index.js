@@ -1,14 +1,10 @@
 // ============================================================
 // AI Context Orchestrator — Cloudflare Worker (API only)
-// Проект: ACOLDP | your-domain.atlassian.net
+// Проект: ACOLDP
 //
 // ENV variables (set in Cloudflare Dashboard → Settings → Variables):
-//   SECRET_KEY     — access password for the UI
-//   GEMINI_API_KEY — Google AI Studio API key
-//   JIRA_DOMAIN    — your-domain.atlassian.net
-//   JIRA_PROJECT   — YOUR_PROJECT
-//   JIRA_EMAIL     — your.email@gmail.com
-//   JIRA_TOKEN     — Atlassian API token
+//   None required — all credentials come from user's session.
+//   Worker acts as a transparent proxy to LLM and Jira APIs.
 // ============================================================
 
 import { callLLM } from "../src/api/gemini.js";
@@ -22,7 +18,7 @@ import {
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, X-Secret-Key"
+  "Access-Control-Allow-Headers": "Content-Type"
 };
 
 export default {
@@ -37,26 +33,21 @@ export default {
       return json({ error: "Only POST allowed" }, 405);
     }
 
-    // Auth
-    if (request.headers.get("X-Secret-Key") !== env.SECRET_KEY) {
-      return json({ error: "Unauthorized" }, 401);
-    }
-
     try {
       const body = await request.json();
       const { raw_text, mode, selected_model, user_config: uCfg = {} } = body;
 
-      // Resolve config: UI settings override env vars
+      // All credentials come from user — no server-side env fallbacks
       const provider = uCfg.provider || "google";
       const baseUrl  = uCfg.base_url || "";
-      const apiKey   = uCfg.api_key  || env.GEMINI_API_KEY;
+      const apiKey   = uCfg.api_key || "";
       const model    = selected_model || "AUTO";
 
       const jiraCfg = {
-        domain:  uCfg.jira_domain  || env.JIRA_DOMAIN,
-        project: uCfg.jira_project || env.JIRA_PROJECT,
-        email:   uCfg.jira_email   || env.JIRA_EMAIL,
-        token:   uCfg.jira_token   || env.JIRA_TOKEN
+        domain:  uCfg.jira_domain  || "",
+        project: uCfg.jira_project || "",
+        email:   uCfg.jira_email   || "",
+        token:   uCfg.jira_token   || ""
       };
 
       // ── MODE: JIRA_PROJECTS ─────────────────────────────────

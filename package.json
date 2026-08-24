@@ -10,6 +10,6 @@
     "deploy:pages": "wrangler pages deploy src/ui --project-name=ai-orchestrator-ui"
   },
   "devDependencies": {
-    "wrangler": "^3.0.0"
+    "wrangler": "^4.125.0"
   }
 }
