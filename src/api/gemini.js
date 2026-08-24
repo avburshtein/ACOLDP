@@ -5,8 +5,8 @@
 
 // Fallback chain for Google — only verified production models
 const GOOGLE_FALLBACK_MODELS = [
-  "gemini-2.5-flash",
   "gemini-2.0-flash",
+  "gemini-1.5-flash",
 ];
 
 /**
@@ -63,19 +63,21 @@ async function callGoogle(apiKey, model, systemPrompt, userText, schema) {
 
         // Overloaded — wait and retry
         if (res.status === 503) {
+          lastError = `[${m}] 503 перегрузка`;
           await sleep(1500);
           continue;
         }
 
         // Quota exhausted or model not found — try next model
         if (res.status === 429 || res.status === 404) {
-          lastError = `[${m}] ${res.status} — switching model`;
+          const reason = res.status === 429 ? "квота исчерпана" : "модель не найдена";
+          lastError = `[${m}] ${res.status} ${reason}`;
           break;
         }
 
         if (!res.ok) {
           const errText = await res.text();
-          lastError = `[${m}] ${res.status}: ${errText}`;
+          lastError = `[${m}] ${res.status}: ${errText.slice(0, 200)}`;
           break;
         }
 
@@ -90,7 +92,7 @@ async function callGoogle(apiKey, model, systemPrompt, userText, schema) {
     }
   }
 
-  throw new Error(`Google API: все модели недоступны (${lastError}). Проверьте API-ключ в Google AI Studio: https://aistudio.google.com/apikey`);
+  throw new Error(`Gemini: все модели недоступны (${lastError}). Проверьте ключ: https://aistudio.google.com/apikey`);
 }
 
 // ── OpenAI-Compatible (Alibaba/Qwen, OpenAI, Custom) ────────
