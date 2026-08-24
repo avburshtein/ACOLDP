@@ -2,6 +2,11 @@
 // AI Context Orchestrator — UI Application Logic
 // ============================================================
 
+import { SAMPLE_RAW_INPUT, SAMPLE_REPORT } from "./demo-data.js";
+
+// Max input size — prevents long-context degradation (v10.x blocker)
+const MAX_INPUT_CHARS = 15000;
+
 // ── State ────────────────────────────────────────────────────
 const state = {
   password: "",
@@ -38,16 +43,24 @@ const resultsPlaceholder = $("results-placeholder");
 const resultsContent = $("results-content");
 const fileInput     = $("file-input");
 const dropZone      = $("drop-zone");
+const demoBtn       = $("demo-btn");
+const charCount     = $("char-count");
+const charLimit     = $("char-limit");
 
 // ── Init ─────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
-  // Auth
+  // Auth — only required when a Worker URL is configured (demo mode needs no password)
   const saved = localStorage.getItem("acoldp_password");
+  const hasWorker = !!localStorage.getItem("acoldp_worker_url");
   if (saved) { state.password = saved; hideAuth(); }
+  else if (!hasWorker) { hideAuth(); } // demo mode — no auth barrier
 
   // Draft
   const draft = localStorage.getItem("acoldp_draft");
   if (draft) inputArea.value = draft;
+
+  // Char counter
+  updateCharCounter();
 
   // Settings
   loadSettings();
@@ -83,7 +96,18 @@ inputArea.addEventListener("input", () => {
     localStorage.setItem("acoldp_draft", inputArea.value);
     showStatusBadge("✓ Черновик сохранён");
   }, 500);
+  updateCharCounter();
 });
+
+function updateCharCounter() {
+  const len = inputArea.value.length;
+  charCount.textContent = `${len.toLocaleString("ru-RU")} символов`;
+  const over = len > MAX_INPUT_CHARS;
+  charCount.classList.toggle("text-red-400", over);
+  charCount.classList.toggle("text-white/30", !over);
+  charLimit.classList.toggle("text-red-400", over);
+  charLimit.classList.toggle("text-white/30", !over);
+}
 
 function showStatusBadge(text) {
   statusBadge.textContent = text;
@@ -124,6 +148,15 @@ clearBtn.addEventListener("click", () => {
   }
 });
 
+// ── Demo ────────────────────────────────────────────────────
+demoBtn.addEventListener("click", () => {
+  inputArea.value = SAMPLE_RAW_INPUT;
+  localStorage.setItem("acoldp_draft", inputArea.value);
+  updateCharCounter();
+  showStatusBadge("✓ Демо-пример загружен");
+  inputArea.focus();
+});
+
 // ── Main actions ──────────────────────────────────────────────
 reportBtn.addEventListener("click", () => sendRequest("REPORT"));
 syncBtn.addEventListener("click",   () => sendRequest("JIRA_SYNC"));
@@ -139,12 +172,33 @@ async function sendRequest(mode) {
   const text = inputArea.value.trim();
   if (!text) { alert("Введите или вставьте данные для обработки"); return; }
 
+  // ── Input size guard (prevents long-context degradation) ──
+  if (text.length > MAX_INPUT_CHARS) {
+    renderError(`Слишком большой объём: ${text.length.toLocaleString("ru-RU")} символов. Лимит — ${MAX_INPUT_CHARS.toLocaleString("ru-RU")}. Сократите текст или разбейте на части.`);
+    return;
+  }
+
   setLoading(true);
 
-  try {
-    const workerUrl = localStorage.getItem("acoldp_worker_url") || "";
-    if (!workerUrl) throw new Error("Worker URL не указан. Откройте ⚙️ Settings.");
+  // ── Demo mode: no Worker URL configured → show pre-baked result ──
+  const workerUrl = localStorage.getItem("acoldp_worker_url") || "";
+  if (!workerUrl) {
+    try {
+      if (mode === "REPORT") {
+        await sleep(900); // brief delay to show loading state
+        state.lastReport = SAMPLE_REPORT;
+        renderReport(SAMPLE_REPORT);
+        renderDemoBanner();
+      } else {
+        renderError("Демо-режим: синхронизация с Jira недоступна. Чтобы включить — укажите Worker API URL и Jira-креды в ⚙️ Settings.");
+      }
+    } finally {
+      setLoading(false);
+    }
+    return;
+  }
 
+  try {
     const res = await fetch(workerUrl, {
       method: "POST",
       headers: {
@@ -270,6 +324,17 @@ function renderError(msg) {
       <div class="result-summary">${escHtml(msg)}</div>
     </div>
   `);
+}
+
+function renderDemoBanner() {
+  const banner = document.createElement("div");
+  banner.className = "result-card commented";
+  banner.style.borderColor = "#facc15";
+  banner.innerHTML = `
+    <div class="result-key" style="color:#facc15">ℹ️ Демо-режим</div>
+    <div class="result-summary">Показан предзаготовленный результат. Для реальной генерации укажите свой API Key и Worker API URL в ⚙️ Settings.</div>
+  `;
+  resultsContent.prepend(banner);
 }
 
 // ── Loading state ─────────────────────────────────────────────
@@ -449,3 +514,5 @@ function escHtml(str) {
 function escAttr(str) {
   return escHtml(str).replace(/"/g, "&quot;");
 }
+
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));

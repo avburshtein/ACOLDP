@@ -70,6 +70,13 @@ export default {
       if (!raw_text) throw new Error("raw_text is required");
       if (!apiKey) throw new Error("API Key не задан. Откройте ⚙️ Settings.");
 
+      // Server-side input guard (defense in depth against long-context degradation)
+      const MAX_INPUT_CHARS = 15000;
+      const inputText = String(raw_text);
+      if (inputText.length > MAX_INPUT_CHARS) {
+        return json({ error: `Входной текст превышает лимит (${inputText.length} > ${MAX_INPUT_CHARS} символов). Сократите или разбейте на части.` }, 413);
+      }
+
       // ── MODE: REPORT ────────────────────────────────────────
       if (mode === "REPORT") {
         const markdown = await callLLM(
