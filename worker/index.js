@@ -38,10 +38,15 @@ export default {
       const { raw_text, mode, selected_model, user_config: uCfg = {} } = body;
 
       // All credentials come from user — no server-side env fallbacks
-      const provider = uCfg.provider || "google";
+      const provider = uCfg.provider || "";
       const baseUrl  = uCfg.base_url || "";
       const apiKey   = uCfg.api_key || "";
       const model    = selected_model || "AUTO";
+
+      // Validate provider is set
+      if (!provider && mode !== "JIRA_PROJECTS") {
+        return json({ error: "Провайдер не выбран. Укажите LLM Provider при входе в сессию." }, 400);
+      }
 
       const jiraCfg = {
         domain:  uCfg.jira_domain  || "",
@@ -59,7 +64,16 @@ export default {
       }
 
       if (!raw_text) throw new Error("raw_text is required");
-      if (!apiKey) throw new Error("API Key не задан. Откройте ⚙️ Settings.");
+      if (!apiKey) throw new Error("API Key не задан. Укажите его при входе в сессию.");
+
+      // Validate model/provider compatibility
+      const modelLower = (model || "").toLowerCase();
+      if (provider === "google" && modelLower.includes("qwen")) {
+        return json({ error: `Модель '${model}' несовместима с провайдером Google Gemini. Переключите провайдер на Alibaba (Qwen) при входе в сессию.` }, 400);
+      }
+      if (provider === "alibaba" && modelLower.includes("gemini")) {
+        return json({ error: `Модель '${model}' несовместима с провайдером Alibaba. Переключите провайдер на Google Gemini.` }, 400);
+      }
 
       // Server-side input guard (defense in depth against long-context degradation)
       const MAX_INPUT_CHARS = 15000;

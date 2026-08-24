@@ -23,6 +23,7 @@ const $ = id => document.getElementById(id);
 
 const authOverlay   = $("auth-overlay");
 const authForm      = $("auth-form");
+const sessProvider  = $("session-provider");
 const sessApiKey    = $("session-api-key");
 const sessJiraDomain = $("session-jira-domain");
 const sessJiraEmail = $("session-jira-email");
@@ -43,8 +44,6 @@ const settingsClose = $("settings-close");
 const settingsCancel = $("settings-cancel");
 const settingsSave  = $("settings-save");
 const loadProjectsBtn = $("cfg-jira-load-projects");
-const cfgProvider   = $("cfg-provider");
-const baseUrlGroup  = $("base-url-group");
 const resultsPlaceholder = $("results-placeholder");
 const resultsContent = $("results-content");
 const fileInput     = $("file-input");
@@ -58,6 +57,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // Session setup — required when Worker URL is configured
   const hasWorker = !!localStorage.getItem("acoldp_cfg_worker-url");
   if (hasWorker) {
+    // Pre-fill provider from saved settings (if any)
+    const savedProvider = localStorage.getItem("acoldp_cfg_provider");
+    if (savedProvider && sessProvider) sessProvider.value = savedProvider;
     // Show session setup overlay — keys never persist to localStorage
     authOverlay.classList.remove("hidden");
   } else {
@@ -80,10 +82,15 @@ authForm.addEventListener("submit", e => {
   e.preventDefault();
   const apiKey = sessApiKey.value.trim();
   if (!apiKey) { showStatusBadge("Введите LLM API Key"); return; }
+  const provider = sessProvider.value;
   state.apiKey = apiKey;
   state.jiraDomain = sessJiraDomain.value.trim();
   state.jiraEmail = sessJiraEmail.value.trim();
   state.jiraToken = sessJiraToken.value.trim();
+
+  // Persist provider to localStorage for consistency
+  localStorage.setItem("acoldp_cfg_provider", provider);
+
   hideAuth();
   inputArea.focus();
 
@@ -91,7 +98,8 @@ authForm.addEventListener("submit", e => {
   sessApiKey.value = "";
   sessJiraToken.value = "";
 
-  showStatusBadge("✓ Сессия начата. Ключи в памяти браузера.");
+  const providerNames = { google: "Gemini", alibaba: "Alibaba", openai: "OpenAI" };
+  showStatusBadge(`✓ Сессия: ${providerNames[provider] || provider}. Ключи в памяти браузера.`);
 });
 
 logoutBtn.addEventListener("click", () => {
@@ -485,13 +493,9 @@ async function loadJiraProjects() {
   }
 }
 
-cfgProvider.addEventListener("change", () => {
-  baseUrlGroup.classList.toggle("hidden", cfgProvider.value !== "custom");
-});
-
 settingsSave.addEventListener("click", () => {
   // Save only non-sensitive settings to localStorage
-  const keys = ["provider","base-url","jira-project","worker-url"];
+  const keys = ["base-url","jira-project","worker-url"];
   keys.forEach(k => {
     localStorage.setItem(`acoldp_cfg_${k}`, $(`cfg-${k}`)?.value || "");
   });
@@ -507,17 +511,16 @@ settingsSave.addEventListener("click", () => {
 });
 
 function loadSettings() {
-  const keys = ["provider","base-url","jira-project","worker-url"];
+  const keys = ["base-url","jira-project","worker-url"];
   keys.forEach(k => {
     const el = $(`cfg-${k}`);
     if (el) el.value = localStorage.getItem(`acoldp_cfg_${k}`) || "";
   });
-  baseUrlGroup.classList.toggle("hidden", cfgProvider.value !== "custom");
 }
 
 function getConfig() {
   return {
-    provider:     localStorage.getItem("acoldp_cfg_provider")     || "google",
+    provider:     localStorage.getItem("acoldp_cfg_provider")     || "",
     api_key:      state.apiKey,
     base_url:     localStorage.getItem("acoldp_cfg_base-url")     || "",
     jira_domain:  state.jiraDomain,

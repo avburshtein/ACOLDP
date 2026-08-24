@@ -27,11 +27,21 @@
       </div>
 
       <div class="space-y-3">
-        <div>
-          <label class="text-xs text-white/50 mb-1 block">LLM API Key</label>
-          <input type="password" id="session-api-key" autocomplete="off"
-            class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-400 transition"
-            placeholder="AIza... или sk-...">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs text-white/50 mb-1 block">LLM Provider</label>
+            <select id="session-provider" class="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-400 transition appearance-none">
+              <option value="google">Google Gemini</option>
+              <option value="alibaba">Alibaba (Qwen)</option>
+              <option value="openai">OpenAI</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-white/50 mb-1 block">LLM API Key</label>
+            <input type="password" id="session-api-key" autocomplete="off"
+              class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-400 transition"
+              placeholder="AIza... или sk-...">
+          </div>
         </div>
         <div>
           <label class="text-xs text-white/50 mb-1 block">Jira Domain</label>
@@ -189,18 +199,12 @@
       </div>
       <div class="modal-body space-y-4">
 
-        <div class="settings-group">
-          <label class="settings-label">LLM Provider</label>
-          <select id="cfg-provider" class="select-full">
-            <option value="google">Google Gemini (Native API)</option>
-            <option value="alibaba">Alibaba DashScope (Qwen)</option>
-            <option value="openai">OpenAI</option>
-            <option value="custom">Custom Base URL</option>
-          </select>
+        <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-xs text-blue-200/80">
+          ℹ️ Провайдер и API-ключ задаются при <strong>входе в сессию</strong>. Здесь только дополнительные настройки.
         </div>
 
-        <div class="settings-group hidden" id="base-url-group">
-          <label class="settings-label">Base URL</label>
+        <div class="settings-group" id="base-url-group">
+          <label class="settings-label">Base URL (для Custom провайдера)</label>
           <input type="text" id="cfg-base-url" class="input-full" placeholder="https://api.example.com/v1">
         </div>
 
