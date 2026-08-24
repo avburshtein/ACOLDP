@@ -54,7 +54,7 @@ Cloudflare Dashboard → Pages → твой проект → Custom domains → 
 - `orchestrator.yourdomain.com`
 
 Worker URL (для поля Settings в UI):
-- `https://ai-orchestrator-api.av-burshtein.workers.dev`
+- `https://ai-orchestrator-api.YOUR_SUBDOMAIN.workers.dev`
 - или `https://api.yourdomain.com` (если настроил custom domain)
 
 ### 4. Настроить UI

@@ -10,8 +10,8 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 # Non-secret vars (override in Dashboard for secrets)
 JIRA_PROJECT = "ACOLDP"
-JIRA_DOMAIN  = "avburshtein.atlassian.net"
-JIRA_EMAIL   = "av.burshtein@gmail.com"
+JIRA_DOMAIN  = "your-domain.atlassian.net"
+JIRA_EMAIL   = ""
 
 # Secrets (set via Dashboard → Settings → Variables → Add Secret):
 # SECRET_KEY

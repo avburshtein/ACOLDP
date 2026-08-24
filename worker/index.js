@@ -1,13 +1,13 @@
 // ============================================================
 // AI Context Orchestrator — Cloudflare Worker (API only)
-// Проект: ACOLDP | avburshtein.atlassian.net
+// Проект: ACOLDP | your-domain.atlassian.net
 //
 // ENV variables (set in Cloudflare Dashboard → Settings → Variables):
 //   SECRET_KEY     — access password for the UI
 //   GEMINI_API_KEY — Google AI Studio API key
-//   JIRA_DOMAIN    — avburshtein.atlassian.net
-//   JIRA_PROJECT   — ACOLDP
-//   JIRA_EMAIL     — av.burshtein@gmail.com
+//   JIRA_DOMAIN    — your-domain.atlassian.net
+//   JIRA_PROJECT   — YOUR_PROJECT
+//   JIRA_EMAIL     — your.email@gmail.com
 //   JIRA_TOKEN     — Atlassian API token
 // ============================================================
 
