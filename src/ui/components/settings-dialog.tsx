@@ -126,9 +126,13 @@ export function SettingsDialog({
               id="cfg-worker-url"
               value={workerUrl}
               onChange={(e) => setWorkerUrl(e.target.value)}
-              placeholder="https://api.yourdomain.com"
+              placeholder="https://ai-orchestrator-api.av-burshtein.workers.dev"
               className={inputCls}
             />
+            <p className="text-label-sm text-[var(--md-sys-color-on-surface-variant)]">
+              Адрес воркера API (*workers.dev), не сайта. Твой:{' '}
+              <code className="font-mono">ai-orchestrator-api.av-burshtein.workers.dev</code>
+            </p>
           </div>
 
           <div className="flex flex-col gap-1.5">

@@ -6,14 +6,30 @@ async function post<T>(workerUrl: string, payload: Record<string, unknown>): Pro
   try {
     res = await fetch(workerUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify(payload),
     });
   } catch {
-    throw new Error('Нет соединения с Worker API. Проверьте URL в ⚙️ Settings.');
+    throw new Error('Нет соединения с Worker API. Проверь URL в ⚙️ Settings и подключение к сети.');
   }
-  const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-  if (!res.ok) throw new Error(String(data['error'] ?? `HTTP ${res.status}`));
+
+  const raw = await res.text();
+  let data: unknown;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    // Ответ не JSON: HTML-страница Cloudflare, пустота, редирект и т.п.
+    const snippet = raw.trim().slice(0, 140) || '(пустой ответ)';
+    throw new Error(
+      `Worker вернул не-JSON (HTTP ${res.status}). Начало ответа: «${snippet}». ` +
+        'Проверь Worker API URL в ⚙️ Settings — там должен быть адрес воркера (*workers.dev), а не сайта.',
+    );
+  }
+
+  if (!res.ok) {
+    const msg = (data as Record<string, unknown>)['error'] ?? `HTTP ${res.status}`;
+    throw new Error(String(msg));
+  }
   return data as T;
 }
 
