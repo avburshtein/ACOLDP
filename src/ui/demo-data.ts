@@ -1,10 +1,12 @@
+/** Демо-данные: предзаготовленный пример дня и отчёта (порт из demo-data.js) */
+
 // ============================================================
 // AI Context Orchestrator — Demo data
 // Pre-baked sample so visitors can see the product work end-to-end
 // without configuring an API key or deploying a Worker.
 // ============================================================
 
-export const DEMO_MODE = true;
+
 
 // Realistic "day dump": chat fragments, code notes, bug observations
 export const SAMPLE_RAW_INPUT = `Сегодня ковырял Flow. Решил переделать блок Morning — раньше он считался от фиксированного 7:00,

@@ -1,0 +1,84 @@
+/* ============================================================
+   AI Context Orchestrator — Black & White Theme System
+   ============================================================ */
+
+/* ── Light theme: чисто белый фон + чёрные акценты ── */
+:root[data-theme='light'] {
+  /* Core: background / surface */
+  --md-sys-color-background: #ffffff;
+  --md-sys-color-on-background: #000000;
+  --md-sys-color-surface: #ffffff;
+  --md-sys-color-on-surface: #000000;
+
+  /* Variants */
+  --md-sys-color-surface-variant: #f5f5f5;
+  --md-sys-color-on-surface-variant: #555555;
+
+  /* Outlines */
+  --md-sys-color-outline: #000000;
+  --md-sys-color-outline-variant: #e0e0e0;
+
+  /* Primary (accent) — чёрный */
+  --md-sys-color-primary: #000000;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #000000;
+  --md-sys-color-on-primary-container: #ffffff;
+  --md-sys-color-primary-fixed: #000000;
+  --md-sys-color-on-primary-fixed: #ffffff;
+
+  /* Secondary */
+  --md-sys-color-secondary-container: #f5f5f5;
+  --md-sys-color-on-secondary-container: #000000;
+
+  /* Error */
+  --md-sys-color-error: #000000;
+  --md-sys-color-on-error: #ffffff;
+  --md-sys-color-error-container: #000000;
+  --md-sys-color-on-error-container: #ffffff;
+
+  /* On-primary-fixed for text inside primary containers */
+  --md-sys-color-on-primary-fixed-variant: #333333;
+}
+
+/* ── Dark theme: чисто чёрный фон + белые акценты ── */
+:root[data-theme='dark'] {
+  /* Core: background / surface */
+  --md-sys-color-background: #000000;
+  --md-sys-color-on-background: #ffffff;
+  --md-sys-color-surface: #000000;
+  --md-sys-color-on-surface: #ffffff;
+
+  /* Variants */
+  --md-sys-color-surface-variant: #1a1a1a;
+  --md-sys-color-on-surface-variant: #aaaaaa;
+
+  /* Outlines */
+  --md-sys-color-outline: #ffffff;
+  --md-sys-color-outline-variant: #333333;
+
+  /* Primary (accent) — белый */
+  --md-sys-color-primary: #ffffff;
+  --md-sys-color-on-primary: #000000;
+  --md-sys-color-primary-container: #ffffff;
+  --md-sys-color-on-primary-container: #000000;
+  --md-sys-color-primary-fixed: #ffffff;
+  --md-sys-color-on-primary-fixed: #000000;
+
+  /* Secondary */
+  --md-sys-color-secondary-container: #1a1a1a;
+  --md-sys-color-on-secondary-container: #ffffff;
+
+  /* Error */
+  --md-sys-color-error: #ffffff;
+  --md-sys-color-on-error: #000000;
+  --md-sys-color-error-container: #ffffff;
+  --md-sys-color-on-error-container: #000000;
+
+  /* On-primary-fixed for text inside primary containers */
+  --md-sys-color-on-primary-fixed-variant: #cccccc;
+}
+
+/* ── Ring offset uses the surface color ── */
+:root {
+  --tw-ring-offset-color: var(--md-sys-color-surface);
+}

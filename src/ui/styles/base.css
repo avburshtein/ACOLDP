@@ -1,0 +1,141 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap');
+
+/* Dark mode via data-theme attribute (Tailwind v4 custom variant) */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme {
+  /* Fonts */
+  --font-sans: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Container */
+  --max-width-container-form: 48rem;
+
+  /* Buttons (MD3 label-large) */
+  --text-button: 0.875rem;
+  --text-button--line-height: 1rem;
+  --text-button--font-weight: 500;
+
+  /* ── Typography scale — Material Design 3 tokens ──
+     Tailwind v4 format: --text-{name}, --text-{name}--line-height, --text-{name}--font-weight
+     Generates utilities: text-label-sm, text-body-md, text-title-lg, etc. */
+
+  /* Labels */
+  --text-label-sm: 0.75rem;
+  --text-label-sm--line-height: 1rem;
+  --text-label-sm--font-weight: 500;
+
+  --text-label-md: 0.875rem;
+  --text-label-md--line-height: 1.25rem;
+  --text-label-md--font-weight: 500;
+
+  --text-label-lg: 1rem;
+  --text-label-lg--line-height: 1.4rem;
+  --text-label-lg--font-weight: 600;
+
+  /* Body */
+  --text-body-sm: 0.875rem;
+  --text-body-sm--line-height: 1.25rem;
+  --text-body-sm--font-weight: 400;
+
+  --text-body-md: 1rem;
+  --text-body-md--line-height: 1.5rem;
+  --text-body-md--font-weight: 400;
+
+  --text-body-lg: 1.125rem;
+  --text-body-lg--line-height: 1.625rem;
+  --text-body-lg--font-weight: 400;
+
+  /* Titles */
+  --text-title-sm: 1.125rem;
+  --text-title-sm--line-height: 1.5rem;
+  --text-title-sm--font-weight: 600;
+
+  --text-title-md: 1.25rem;
+  --text-title-md--line-height: 1.75rem;
+  --text-title-md--font-weight: 600;
+
+  --text-title-lg: 1.375rem;
+  --text-title-lg--line-height: 1.75rem;
+  --text-title-lg--font-weight: 600;
+
+  --text-title-xl: 1.5rem;
+  --text-title-xl--line-height: 2rem;
+  --text-title-xl--font-weight: 600;
+
+  /* Headlines */
+  --text-headline-sm: 1.5rem;
+  --text-headline-sm--line-height: 2rem;
+  --text-headline-sm--font-weight: 700;
+
+  --text-headline-md: 1.75rem;
+  --text-headline-md--line-height: 2.25rem;
+  --text-headline-md--font-weight: 700;
+
+  --text-headline-lg: 2rem;
+  --text-headline-lg--line-height: 2.5rem;
+  --text-headline-lg--font-weight: 700;
+
+  --text-headline-xl: 2.25rem;
+  --text-headline-xl--line-height: 2.75rem;
+  --text-headline-xl--font-weight: 700;
+
+  /* Display */
+  --text-display-sm: 2.5rem;
+  --text-display-sm--line-height: 3rem;
+  --text-display-sm--font-weight: 700;
+
+  --text-display-md: 3rem;
+  --text-display-md--line-height: 3.5rem;
+  --text-display-md--font-weight: 700;
+
+  --text-display-lg: 3.5rem;
+  --text-display-lg--line-height: 4rem;
+  --text-display-lg--font-weight: 700;
+}
+
+@layer base {
+  :root {
+    /* Default to dark theme (matches existing project default) */
+    --md-sys-color-background: #000000;
+    --md-sys-color-on-background: #ffffff;
+    --md-sys-color-surface: #000000;
+    --md-sys-color-on-surface: #ffffff;
+    --md-sys-color-surface-variant: #1a1a1a;
+    --md-sys-color-on-surface-variant: #aaaaaa;
+    --md-sys-color-outline: #ffffff;
+    --md-sys-color-outline-variant: #333333;
+    --md-sys-color-primary: #ffffff;
+    --md-sys-color-on-primary: #000000;
+    --md-sys-color-primary-container: #ffffff;
+    --md-sys-color-on-primary-container: #000000;
+    --md-sys-color-on-primary-fixed-variant: #cccccc;
+    --md-sys-color-secondary-container: #1a1a1a;
+    --md-sys-color-on-secondary-container: #ffffff;
+    --md-sys-color-error: #ffffff;
+    --md-sys-color-on-error: #000000;
+    --md-sys-color-error-container: #ffffff;
+    --md-sys-color-on-error-container: #000000;
+    --tw-ring-offset-color: var(--md-sys-color-surface);
+  }
+
+  html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+  body {
+    @apply bg-[var(--md-sys-color-background)] text-[var(--md-sys-color-on-surface)] font-sans antialiased;
+    margin: 0;
+  }
+}
+
+@layer components {
+  .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-[var(--md-sys-color-outline-variant)] rounded;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-[var(--md-sys-color-on-surface-variant)];
+  }
+}
+

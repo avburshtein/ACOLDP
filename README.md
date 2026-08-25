@@ -11,9 +11,43 @@ GitHub Repo
     │   └── index.js        api.yourdomain.com
     │
     └── src/
-        ├── api/         → Модули (Gemini, Jira, Prompts)
-        └── ui/          → Cloudflare Pages (UI)
-                            orchestrator.yourdomain.com
+        ├── api/         → Модули (Gemini, Jira, Prompts) — plain JS, без сборки
+        └── ui/          → React + TypeScript + Vite + Tailwind CSS v4
+            ├── main.tsx            Точка входа React
+            ├── app.tsx            Корневой компонент приложения
+            ├── components/        Компоненты (включая UI-примитивы из UX42)
+            │   ├── ui/            Библиотека примитивов (Button, Card, Dialog…)
+            │   └── theme-toggle.tsx  Переключатель light/dark темы
+            ├── hooks/             use-theme.tsx — контекст темы
+            ├── lib/utils.ts       cn() для merge классов
+            └── styles/
+                ├── base.css       Tailwind v4 (@theme), типографика MD3
+                └── theme.css      Ч/б палитра: light и dark через data-theme
+```
+
+## Дизайн-система
+
+**Чёрно-белая палитра с переключаемыми темами** — акцент на контенте:
+
+- **Light**: чисто белый фон (`#fff`) + чёрные акценты (`#000`)
+- **Dark**: чисто чёрный фон (`#000`) + белые акценты (`#fff`)
+
+Токены Material Design 3 (`--md-sys-color-*`) маппятся на ч/б значения в `src/ui/styles/theme.css`.
+Переключение — атрибут `data-theme="dark|light"` на `<html>`, выбор сохраняется в localStorage.
+
+**UI-компоненты** (из UX42, адаптированы): Avatar, Badge, Button, Card, Checkbox,
+Dialog, DropdownMenu, FormBox, Input, Label, PageTitle, Select, Skeleton, Switch,
+Tabs, Textarea, Title, Toast.
+
+Импорт: `import { Button, Card, Dialog } from '@/components/ui';`
+
+## Разработка
+
+```bash
+npm install
+npm run dev          # Vite dev-сервер → http://localhost:5173
+npm run build        # Прод-сборка в dist/ui
+npm run typecheck    # Проверка типов TypeScript
 ```
 
 ## Деплой
@@ -21,7 +55,6 @@ GitHub Repo
 ### 1. Worker (API)
 
 ```bash
-npm install
 npm run deploy:worker
 ```
 
@@ -38,14 +71,14 @@ npm run deploy:worker
 **Вариант A — через GitHub (рекомендуется):**
 1. Cloudflare Dashboard → Pages → Create project → Connect to Git
 2. Выбери репозиторий → Build settings:
-   - Framework: None
-   - Build command: *(пусто)*
-   - Output directory: `src/ui`
+   - Framework: None (или Vite)
+   - Build command: `npm run build`
+   - Output directory: `dist/ui`
 3. Deploy!
 
 **Вариант B — вручную:**
 ```bash
-npm run deploy:pages
+npm run deploy:pages   # = npm run build + wrangler pages deploy dist/ui
 ```
 
 ### 3. Привязать домен
@@ -68,19 +101,41 @@ Worker URL (для поля Settings в UI):
 ```
 ai-orchestrator/
 ├── worker/
-│   └── index.js          # Cloudflare Worker — точка входа API
+│   └── index.js              # Cloudflare Worker — точка входа API
 ├── src/
-│   ├── api/
-│   │   ├── gemini.js     # LLM вызовы (Google + OpenAI-compatible)
-│   │   ├── jira.js       # Jira REST API (fetch, create, update, comment)
-│   │   └── prompts.js    # Системные промпты и JSON Schema
-│   └── ui/
-│       ├── index.html    # Главная страница
-│       ├── app.js        # UI логика
-│       └── styles.css    # Стили
-├── wrangler.toml         # Cloudflare Worker конфиг
-├── package.json
-└── README.md
+│   ├── api/                  # Plain JS, используются Worker'ом напрямую
+│   │   ├── gemini.js         # LLM вызовы (Google + OpenAI-compatible)
+│   │   ├── jira.js           # Jira REST API (fetch, create, update, comment)
+│   │   └── prompts.js        # Системные промпты и JSON Schema
+│   └── ui/                   # React SPA (Vite root)
+│       ├── index.html        # HTML-шаблон с <div id="root">
+│       ├── main.tsx          # React entry: ThemeProvider + App
+│       ├── app.tsx           # Оркестратор: сессия, запросы к Worker, состояние
+│       ├── types.ts          # Общие типы (UserConfig, JiraResult…) и константы
+│       ├── demo-data.ts      # Демо-пример для режима без Worker
+│       ├── components/
+│       │   ├── auth-overlay.tsx    # Вход в сессию (ключи только в памяти)
+│       │   ├── settings-dialog.tsx # Настройки + загрузка Jira-проектов
+│       │   ├── input-panel.tsx     # Панель ввода: textarea, drop-zone, счётчик
+│       │   ├── results-panel.tsx   # Отчёт / результаты Jira / loading / ошибки
+│       │   ├── status-badge.tsx    # Статус-плашка с авто-скрытием
+│       │   ├── theme-toggle.tsx    # Кнопка light/dark
+│       │   └── ui/                 # UI-библиотека примитивов (из UX42)
+│       ├── hooks/use-theme.tsx     # Контекст темы + localStorage
+│       ├── lib/
+│       │   ├── api.ts        # POST к Worker: REPORT / JIRA_SYNC / JIRA_PROJECTS
+│       │   ├── storage.ts    # acoldp_cfg_* и черновик в localStorage
+│       │   └── utils.ts      # cn() = clsx + tailwind-merge
+│       └── styles/
+│           ├── base.css      # Tailwind v4 @theme, типографика MD3
+│           └── theme.css     # Ч/б палитра light/dark
+├── dist/ui/                  # Прод-сборка (деплоится на Pages)
+├── wrangler.toml             # Cloudflare Worker конфиг
+├── vite.config.ts            # Vite: root=src/ui, alias @ → src/ui
+├── tailwind.config.cjs       # Content paths (тема — в CSS через @theme)
+├── postcss.config.cjs        # @tailwindcss/postcss
+├── tsconfig.json
+└── package.json
 ```
 
 ## Использование
