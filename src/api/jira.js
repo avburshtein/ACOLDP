@@ -25,13 +25,13 @@ const jiraHeaders = (email, token, extra = {}) => ({
  * Разобрать ответ Jira: JSON или ПОНЯТНАЯ ошибка вместо SyntaxError.
  * context — человеческое описание операции («список проектов»…)
  */
-async function parseJiraResponse(res, context) {
+async function parseJiraResponse(res, context, domain = "") {
   const text = await res.text();
   let data;
   try {
     data = JSON.parse(text);
   } catch {
-    throw new Error(describeNonJson(res, text, context));
+    throw new Error(describeNonJson(res, text, context, domain));
   }
   if (!res.ok) {
     const apiMsg =
@@ -46,29 +46,55 @@ async function parseJiraResponse(res, context) {
   return data;
 }
 
-/** Диагностика не-JSON ответа (страница блокировки Cloudflare и т.п.) */
-function describeNonJson(res, text, context) {
+/**
+ * Диагностика не-JSON ответа: страница блокировки Cloudflare, требование
+ * CAPTCHA (Atlassian включает её после серии неуспешных Basic-попыток,
+ * особенно с датацентровых IP) и прочие HTML-заглушки.
+ */
+function describeNonJson(res, text, context, domain = "") {
   const t = String(text || "");
-  const cloudflareBlock =
-    /attention required|access denied|cf-ray|just a moment|cloudflare/i.test(t);
-  if (cloudflareBlock) {
-    return (
-      `Jira (${context}): запрос заблокирован защитой Cloudflare/Atlassian ` +
-      `(HTTP ${res.status}). Egress-IP Cloudflare Workers часто попадает под ` +
-      `ограничения Atlassian. Повтори попытку позже либо используй прокси вне Cloudflare.`
-    );
-  }
-  if (res.status === 401 || res.status === 403) {
-    return (
-      `Jira (${context}): ${res.status} — проверь Jira Domain, Email и API Token. ` +
-      `Убедись, что токен создан на id.atlassian.com для этого аккаунта.`
-    );
-  }
   const plain = t
     .replace(/<[^>]*>/g, " ")
     .replace(/\s+/g, " ")
     .trim()
-    .slice(0, 140);
+    .slice(0, 160);
+
+  const deniedHeader =
+    res.headers && typeof res.headers.get === "function"
+      ? res.headers.get("x-authentication-denied-reason") || ""
+      : "";
+  const hay = `${deniedHeader}\n${t}`.toLowerCase();
+
+  // CAPTCHA / временная блокировка аутентификации
+  if (hay.includes("captcha")) {
+    const loginHint = domain
+      ? ` Проверь логин вручную на https://${domain}/login — успешный вход снимает блокировку.`
+      : "";
+    return (
+      `Jira (${context}): ${res.status}, Atlassian требует CAPTCHA` +
+      `${deniedHeader ? ` (${deniedHeader})` : " (обычно после нескольких неудачных попыток входа)"}.` +
+      ` Подожди 15–30 минут перед повтором.${loginHint}`
+    );
+  }
+
+  // Страница блокировки Cloudflare/WAF
+  if (/attention required|access denied|cf-ray|just a moment|cloudflare/.test(hay)) {
+    return (
+      `Jira (${context}): запрос заблокирован защитой Cloudflare/Atlassian (HTTP ${res.status}). ` +
+      `Egress-IP Cloudflare Workers часто попадает под ограничения. ` +
+      `Повтори позже либо используй прокси вне Cloudflare.` +
+      (plain ? ` Ответ: «${plain}»` : "")
+    );
+  }
+
+  if (res.status === 401 || res.status === 403) {
+    return (
+      `Jira (${context}): ${res.status} — проверь Jira Domain, Email и API Token ` +
+      `(токен создаётся на id.atlassian.com).` +
+      (plain ? ` Ответ сервера: «${plain}»` : "")
+    );
+  }
+
   return `Jira (${context}): получен не-JSON ответ (HTTP ${res.status}). Начало: «${plain || "(пусто)"}»`;
 }
 
@@ -104,7 +130,7 @@ export async function fetchProjects(cfg) {
 
   const url = `https://${cfg.domain}/rest/api/2/project`;
   const res = await fetch(url, { headers: jiraHeaders(cfg.email, cfg.token) });
-  const data = await parseJiraResponse(res, "список проектов");
+  const data = await parseJiraResponse(res, "список проектов", cfg.domain);
   return (Array.isArray(data) ? data : [])
     .map(p => ({ key: p.key, name: p.name || p.key }))
     .sort((a, b) => a.key.localeCompare(b.key));
@@ -141,7 +167,7 @@ export async function fetchOpenTickets(cfg) {
       }),
       body: JSON.stringify(body)
     });
-    const data = await parseJiraResponse(res, `поиск тикетов (${cfg.project})`);
+    const data = await parseJiraResponse(res, `поиск тикетов (${cfg.project})`, cfg.domain);
 
     issues.push(...(data.issues || []));
     nextPageToken = data.nextPageToken;
@@ -215,7 +241,7 @@ async function createTicket(act, cfg, base, headers) {
     try {
       created = JSON.parse(text);
     } catch {
-      return { status: "error", summary: act.summary, error: describeNonJson(res, text, "создание тикета") };
+      return { status: "error", summary: act.summary, error: describeNonJson(res, text, "создание тикета", cfg.domain) };
     }
     return {
       status: "created",
