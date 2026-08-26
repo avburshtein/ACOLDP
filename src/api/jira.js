@@ -113,16 +113,41 @@ export async function fetchProjects(cfg) {
 /**
  * Fetch all open Jira tickets for deduplication context.
  * Бросает ошибку: если бэклог недоступен, синк мог бы создать дубликаты.
+ *
+ * Эндпоинт: POST /rest/api/3/search/jql — старый GET /rest/api/2/search
+ * удалён Atlassian (changelog CHANGE-2046). Новый поиск пагинируется через
+ * nextPageToken и не возвращает total.
  */
+const TICKET_FIELDS = ["key", "summary", "priority", "status", "issuetype"];
+const MAX_TICKETS = 100;
+
 export async function fetchOpenTickets(cfg) {
   if (!cfg.domain || !cfg.token || !cfg.project) return [];
 
   const jql = `project = "${cfg.project}" AND statusCategory != Done ORDER BY updated DESC`;
-  const url = `https://${cfg.domain}/rest/api/2/search?jql=${encodeURIComponent(jql)}&fields=key,summary,priority,status,issuetype&maxResults=100`;
+  const url = `https://${cfg.domain}/rest/api/3/search/jql`;
 
-  const res = await fetch(url, { headers: jiraHeaders(cfg.email, cfg.token) });
-  const data = await parseJiraResponse(res, `поиск тикетов (${cfg.project})`);
-  return (data.issues || []).map(i => ({
+  const issues = [];
+  let nextPageToken;
+
+  do {
+    const body = { jql, fields: TICKET_FIELDS, maxResults: 100 };
+    if (nextPageToken) body.nextPageToken = nextPageToken;
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: jiraHeaders(cfg.email, cfg.token, {
+        "Content-Type": "application/json"
+      }),
+      body: JSON.stringify(body)
+    });
+    const data = await parseJiraResponse(res, `поиск тикетов (${cfg.project})`);
+
+    issues.push(...(data.issues || []));
+    nextPageToken = data.nextPageToken;
+  } while (nextPageToken && issues.length < MAX_TICKETS);
+
+  return issues.slice(0, MAX_TICKETS).map(i => ({
     key: i.key,
     summary: i.fields.summary,
     priority: i.fields.priority?.name || "Medium",
