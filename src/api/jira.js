@@ -34,6 +34,9 @@ async function parseJiraResponse(res, context, domain = "") {
     throw new Error(describeNonJson(res, text, context, domain));
   }
   if (!res.ok) {
+    if (res.status === 429) {
+      throw new Error(rateLimitMessage(context));
+    }
     const apiMsg =
       (Array.isArray(data?.errorMessages) && data.errorMessages.join("; ")) ||
       (data?.errors && typeof data.errors === "object"
@@ -98,6 +101,42 @@ function describeNonJson(res, text, context, domain = "") {
   return `Jira (${context}): получен не-JSON ответ (HTTP ${res.status}). Начало: «${plain || "(пусто)"}»`;
 }
 
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+/** Понятное сообщение про rate-limits после исчерпанных автоповторов */
+function rateLimitMessage(context) {
+  return (
+    `Jira (${context}): превышены rate-limits Atlassian (HTTP 429) — ` +
+    `автоповторы не помогли. Подожди около минуты и повтори операцию.`
+  );
+}
+
+/**
+ * Обёртка над fetch с уважением к burst rate-limits Atlassian:
+ * при HTTP 429 читает Retry-After (секунды или HTTP-date),
+ * ждёт и повторяет до 2 раз перед тем, как отдать ответ наверх.
+ */
+async function jiraFetch(url, init) {
+  const MAX_ATTEMPTS = 3; // 1 исходный запрос + 2 повтора
+  const MAX_WAIT_MS = 10_000;
+
+  for (let attempt = 1; ; attempt++) {
+    const res = await fetch(url, init);
+    if (res.status !== 429 || attempt >= MAX_ATTEMPTS) return res;
+
+    const ra = res.headers.get("retry-after") || "";
+    const secs = Number(ra);
+    let waitMs;
+    if (ra && Number.isFinite(secs)) waitMs = secs * 1000;
+    else if (ra) {
+      const at = Date.parse(ra);
+      waitMs = Number.isNaN(at) ? 2000 : Math.max(0, at - Date.now());
+    } else waitMs = 2000;
+
+    await sleep(Math.min(waitMs, MAX_WAIT_MS) + attempt * 500); // + джиттер
+  }
+}
+
 /** Короткая выжимка из ошибочного ответа для карточек результатов */
 function briefError(text, status) {
   let data;
@@ -129,7 +168,7 @@ export async function fetchProjects(cfg) {
   if (!cfg.domain || !cfg.token) return [];
 
   const url = `https://${cfg.domain}/rest/api/2/project`;
-  const res = await fetch(url, { headers: jiraHeaders(cfg.email, cfg.token) });
+  const res = await jiraFetch(url, { headers: jiraHeaders(cfg.email, cfg.token) });
   const data = await parseJiraResponse(res, "список проектов", cfg.domain);
   return (Array.isArray(data) ? data : [])
     .map(p => ({ key: p.key, name: p.name || p.key }))
@@ -160,7 +199,7 @@ export async function fetchOpenTickets(cfg) {
     const body = { jql, fields: TICKET_FIELDS, maxResults: 100 };
     if (nextPageToken) body.nextPageToken = nextPageToken;
 
-    const res = await fetch(url, {
+    const res = await jiraFetch(url, {
       method: "POST",
       headers: jiraHeaders(cfg.email, cfg.token, {
         "Content-Type": "application/json"
@@ -227,7 +266,7 @@ async function createTicket(act, cfg, base, headers) {
     }
   };
 
-  const res = await fetch(`${base}/issue`, {
+  const res = await jiraFetch(`${base}/issue`, {
     method: "POST",
     headers,
     body: JSON.stringify(body)
@@ -257,7 +296,7 @@ async function createTicket(act, cfg, base, headers) {
 }
 
 async function updatePriority(act, cfg, base, headers) {
-  const res = await fetch(`${base}/issue/${act.matched_jira_key}`, {
+  const res = await jiraFetch(`${base}/issue/${act.matched_jira_key}`, {
     method: "PUT",
     headers,
     body: JSON.stringify({ fields: { priority: { name: act.new_priority || "High" } } })
@@ -277,7 +316,7 @@ async function updatePriority(act, cfg, base, headers) {
 }
 
 async function addComment(act, cfg, base, headers) {
-  const res = await fetch(`${base}/issue/${act.matched_jira_key}/comment`, {
+  const res = await jiraFetch(`${base}/issue/${act.matched_jira_key}/comment`, {
     method: "POST",
     headers,
     body: JSON.stringify({ body: act.comment_text || "Контекст обновлён из дневного дайджеста." })
@@ -293,4 +332,25 @@ async function addComment(act, cfg, base, headers) {
   }
 
   return { status: "error", jira_key: act.matched_jira_key, error: "Failed to add comment" };
+}
+
+/**
+ * Выполнить действия ПОСЛЕДОВАТЕЛЬНО с паузой между вызовами.
+ *
+ * Почему не Promise.allSettled залпом: краткосрочные burst-лимиты Atlassian
+ * (Token Bucket, запросов в секунду) режут одновременную запись пачки
+ * тикетов ошибкой HTTP 429; кроме того, бёрсты Basic-auth запросов
+ * повышают риск CAPTCHA-блокировки датацентрового IP воркера.
+ */
+export async function processActionsThrottled(actions, cfg, delayMs = 300) {
+  const results = [];
+  for (let i = 0; i < actions.length; i++) {
+    if (i > 0) await sleep(delayMs);
+    try {
+      results.push(await processAction(actions[i], cfg));
+    } catch (err) {
+      results.push({ status: "error", error: err?.message || String(err) });
+    }
+  }
+  return results;
 }

@@ -8,7 +8,7 @@
 // ============================================================
 
 import { callLLM } from "../src/api/gemini.js";
-import { fetchProjects, fetchOpenTickets, processAction } from "../src/api/jira.js";
+import { fetchProjects, fetchOpenTickets, processActionsThrottled } from "../src/api/jira.js";
 import {
   REPORT_SYSTEM_INSTRUCTION,
   DEDUP_SYSTEM_INSTRUCTION,
@@ -116,14 +116,10 @@ export default {
 
       const actions = JSON.parse(outputText).actions || [];
 
-      // 4. Execute actions in Jira
-      const results = await Promise.allSettled(
-        actions.map(act => processAction(act, jiraCfg))
-      );
-
-      const finalResults = results.map(r =>
-        r.status === "fulfilled" ? r.value : { status: "error", error: r.reason?.message }
-      );
+      // 4. Execute actions in Jira — строго последовательно с паузой:
+      // одновременный залп записей ловит burst rate-limit Atlassian (HTTP 429)
+      // и повышает риск CAPTCHA-блокировки IP.
+      const finalResults = await processActionsThrottled(actions, jiraCfg);
 
       // 5. Summary stats
       const stats = {
