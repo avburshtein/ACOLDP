@@ -1,4 +1,4 @@
-import { Copy, Download, Sparkles, Zap } from 'lucide-react';
+import { Copy, Download, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { JiraResult, SyncStats } from '@/types';
 import { cn } from '@/lib/utils';
@@ -56,7 +56,7 @@ export function ResultsPanel({
               onClick={onConvert}
               title="Отправить отчёт в Jira как входные данные"
             >
-              <Zap className="h-3.5 w-3.5" /> В тикеты
+              В тикеты
             </Button>
             <Button variant="ghost" size="icon" onClick={onCopy} title="Копировать">
               <Copy className="h-4 w-4" />

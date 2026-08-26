@@ -1,68 +1,143 @@
 // ============================================================
 // AI Context Orchestrator — Jira API Module
+//
+// ВАЖНО: *.atlassian.net прикрыт Cloudflare/edge-защитой Atlassian,
+// которая режет запросы без браузерного User-Agent и с датацентровых
+// IP (в т.ч. egress Cloudflare Workers). Раньше это проявлялось как
+// «Unexpected token 'C', "Cloudflare"... is not valid JSON» —
+// res.json() падал на HTML-странице блокировки. Теперь:
+//   1) все запросы идут с браузерным набором заголовков;
+//   2) тело читается через text(), ошибки — понятные, с контекстом.
 // ============================================================
 
+/** Браузерный UA — Atlassian отдаёт страницу блокировки клиентам без него */
+const BROWSER_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+
+const jiraHeaders = (email, token, extra = {}) => ({
+  Authorization: `Basic ${btoa(`${email}:${token}`)}`,
+  Accept: "application/json",
+  "User-Agent": BROWSER_UA,
+  ...extra,
+});
+
 /**
- * Fetch all accessible Jira projects (for the project selector dropdown)
+ * Разобрать ответ Jira: JSON или ПОНЯТНАЯ ошибка вместо SyntaxError.
+ * context — человеческое описание операции («список проектов»…)
+ */
+async function parseJiraResponse(res, context) {
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(describeNonJson(res, text, context));
+  }
+  if (!res.ok) {
+    const apiMsg =
+      (Array.isArray(data?.errorMessages) && data.errorMessages.join("; ")) ||
+      (data?.errors && typeof data.errors === "object"
+        ? Object.values(data.errors).join("; ")
+        : "") ||
+      data?.message ||
+      `HTTP ${res.status}`;
+    throw new Error(`Jira (${context}): ${apiMsg}`);
+  }
+  return data;
+}
+
+/** Диагностика не-JSON ответа (страница блокировки Cloudflare и т.п.) */
+function describeNonJson(res, text, context) {
+  const t = String(text || "");
+  const cloudflareBlock =
+    /attention required|access denied|cf-ray|just a moment|cloudflare/i.test(t);
+  if (cloudflareBlock) {
+    return (
+      `Jira (${context}): запрос заблокирован защитой Cloudflare/Atlassian ` +
+      `(HTTP ${res.status}). Egress-IP Cloudflare Workers часто попадает под ` +
+      `ограничения Atlassian. Повтори попытку позже либо используй прокси вне Cloudflare.`
+    );
+  }
+  if (res.status === 401 || res.status === 403) {
+    return (
+      `Jira (${context}): ${res.status} — проверь Jira Domain, Email и API Token. ` +
+      `Убедись, что токен создан на id.atlassian.com для этого аккаунта.`
+    );
+  }
+  const plain = t
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 140);
+  return `Jira (${context}): получен не-JSON ответ (HTTP ${res.status}). Начало: «${plain || "(пусто)"}»`;
+}
+
+/** Короткая выжимка из ошибочного ответа для карточек результатов */
+function briefError(text, status) {
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    const plain = String(text || "")
+      .replace(/<[^>]*>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 140);
+    return plain || `HTTP ${status}`;
+  }
+  return (
+    (Array.isArray(data?.errorMessages) && data.errorMessages.join("; ")) ||
+    (data?.errors && typeof data.errors === "object"
+      ? JSON.stringify(data.errors)
+      : "") ||
+    data?.message ||
+    `HTTP ${status}`
+  );
+}
+
+/**
+ * Fetch all accessible Jira projects (for the project selector dropdown).
+ * Бросает ошибку с причиной — чтобы Settings показывал, что именно не так.
  */
 export async function fetchProjects(cfg) {
   if (!cfg.domain || !cfg.token) return [];
 
-  const auth = basicAuth(cfg.email, cfg.token);
   const url = `https://${cfg.domain}/rest/api/2/project`;
-
-  try {
-    const res = await fetch(url, {
-      headers: { "Authorization": auth, "Accept": "application/json" }
-    });
-    if (!res.ok) return [];
-    const data = await res.json();
-    return (Array.isArray(data) ? data : [])
-      .map(p => ({ key: p.key, name: p.name || p.key }))
-      .sort((a, b) => a.key.localeCompare(b.key));
-  } catch {
-    return [];
-  }
+  const res = await fetch(url, { headers: jiraHeaders(cfg.email, cfg.token) });
+  const data = await parseJiraResponse(res, "список проектов");
+  return (Array.isArray(data) ? data : [])
+    .map(p => ({ key: p.key, name: p.name || p.key }))
+    .sort((a, b) => a.key.localeCompare(b.key));
 }
 
 /**
- * Fetch all open Jira tickets for deduplication context
+ * Fetch all open Jira tickets for deduplication context.
+ * Бросает ошибку: если бэклог недоступен, синк мог бы создать дубликаты.
  */
 export async function fetchOpenTickets(cfg) {
   if (!cfg.domain || !cfg.token || !cfg.project) return [];
 
-  const auth = basicAuth(cfg.email, cfg.token);
   const jql = `project = "${cfg.project}" AND statusCategory != Done ORDER BY updated DESC`;
   const url = `https://${cfg.domain}/rest/api/2/search?jql=${encodeURIComponent(jql)}&fields=key,summary,priority,status,issuetype&maxResults=100`;
 
-  try {
-    const res = await fetch(url, {
-      headers: { "Authorization": auth, "Accept": "application/json" }
-    });
-    if (!res.ok) return [];
-    const data = await res.json();
-    return (data.issues || []).map(i => ({
-      key: i.key,
-      summary: i.fields.summary,
-      priority: i.fields.priority?.name || "Medium",
-      type: i.fields.issuetype?.name || "Task",
-      status: i.fields.status?.name || "To Do"
-    }));
-  } catch {
-    return [];
-  }
+  const res = await fetch(url, { headers: jiraHeaders(cfg.email, cfg.token) });
+  const data = await parseJiraResponse(res, `поиск тикетов (${cfg.project})`);
+  return (data.issues || []).map(i => ({
+    key: i.key,
+    summary: i.fields.summary,
+    priority: i.fields.priority?.name || "Medium",
+    type: i.fields.issuetype?.name || "Task",
+    status: i.fields.status?.name || "To Do"
+  }));
 }
 
 /**
  * Process a single action from LLM output
  */
 export async function processAction(act, cfg) {
-  const auth = basicAuth(cfg.email, cfg.token);
-  const headers = {
-    "Authorization": auth,
-    "Content-Type": "application/json",
-    "Accept": "application/json"
-  };
+  const headers = jiraHeaders(cfg.email, cfg.token, {
+    "Content-Type": "application/json"
+  });
   const base = `https://${cfg.domain}/rest/api/2`;
 
   if (act.action_type === "CREATE") {
@@ -107,20 +182,27 @@ async function createTicket(act, cfg, base, headers) {
     body: JSON.stringify(body)
   });
 
-  const data = await res.json();
+  // Читаем текст один раз: страница блокировки тоже не должна ронять воркер
+  const text = await res.text();
 
   if (res.ok) {
+    let created;
+    try {
+      created = JSON.parse(text);
+    } catch {
+      return { status: "error", summary: act.summary, error: describeNonJson(res, text, "создание тикета") };
+    }
     return {
       status: "created",
       summary: act.summary,
-      jira_key: data.key,
-      jira_url: `https://${cfg.domain}/browse/${data.key}`,
+      jira_key: created.key,
+      jira_url: `https://${cfg.domain}/browse/${created.key}`,
       priority: act.priority || "Medium",
       issue_type: act.issue_type || "Task"
     };
   }
 
-  return { status: "error", summary: act.summary, error: data.errors || data.errorMessages };
+  return { status: "error", summary: act.summary, error: briefError(text, res.status) };
 }
 
 async function updatePriority(act, cfg, base, headers) {
@@ -161,5 +243,3 @@ async function addComment(act, cfg, base, headers) {
 
   return { status: "error", jira_key: act.matched_jira_key, error: "Failed to add comment" };
 }
-
-const basicAuth = (email, token) => `Basic ${btoa(`${email}:${token}`)}`;

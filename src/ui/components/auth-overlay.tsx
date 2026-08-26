@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -56,7 +57,6 @@ export function AuthOverlay({ open, defaultProvider, onSubmit }: AuthOverlayProp
         className="flex w-full max-w-md flex-col gap-4 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] p-8 shadow-2xl"
       >
         <div className="text-center">
-          <div className="mb-2 text-3xl">⚡</div>
           <h2 className="text-title-lg font-bold text-[var(--md-sys-color-on-surface)]">
             ACOLDP Orchestrator
           </h2>
@@ -65,9 +65,15 @@ export function AuthOverlay({ open, defaultProvider, onSubmit }: AuthOverlayProp
           </p>
         </div>
 
-        <div className="rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-variant)] p-3 text-xs text-[var(--md-sys-color-on-surface-variant)]">
-          ⚠️ Ключи хранятся <strong>только в памяти браузера</strong> и исчезнут
-          при закрытии вкладки. Ответственность за сохранность ключей лежит на вас.
+        <div className="flex items-start gap-2 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-variant)] p-3 text-xs text-[var(--md-sys-color-on-surface-variant)]">
+          <TriangleAlert
+            className="mt-0.5 h-4 w-4 shrink-0 text-[var(--md-sys-color-on-surface)]"
+            aria-hidden="true"
+          />
+          <span>
+            Ключи хранятся <strong>только в памяти браузера</strong> и исчезнут
+            при закрытии вкладки. Ответственность за сохранность ключей лежит на вас.
+          </span>
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -140,8 +146,8 @@ export function AuthOverlay({ open, defaultProvider, onSubmit }: AuthOverlayProp
           </p>
         )}
 
-        <Button type="submit" className="w-full gap-2">
-          ⚡ Войти
+        <Button type="submit" className="w-full">
+          Войти
         </Button>
       </form>
     </div>
