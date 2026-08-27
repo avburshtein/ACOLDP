@@ -8,7 +8,11 @@ export const PROVIDER_NAMES: Record<string, string> = {
   openai: 'OpenAI',
 };
 
-export const MAX_INPUT_CHARS = 15000;
+/** Максимум символов входного текста. 100 000 ≈ 25k токенов — безопасно для
+ *  Gemini 1.5 (1M), Qwen-max / GPT-4o (128k). Поднимайте при необходимости;
+ *  это лишь предохранитель от случайного «гигантского» ввода, а не жёсткий лимит.
+ */
+export const MAX_INPUT_CHARS = 100000;
 
 /** Креды сессии — живут ТОЛЬКО в памяти (не попадают в localStorage) */
 export interface SessionKeys {

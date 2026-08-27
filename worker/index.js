@@ -75,8 +75,8 @@ export default {
         return json({ error: `Модель '${model}' несовместима с провайдером Alibaba. Переключите провайдер на Google Gemini.` }, 400);
       }
 
-      // Server-side input guard (defense in depth against long-context degradation)
-      const MAX_INPUT_CHARS = 15000;
+            // Server-side input guard (defense in depth against long-context degradation)
+      const MAX_INPUT_CHARS = 100000; // повышено: экспорты больших чатов > 15k симв.
       const inputText = String(raw_text);
       if (inputText.length > MAX_INPUT_CHARS) {
         return json({ error: `Входной текст превышает лимит (${inputText.length} > ${MAX_INPUT_CHARS} символов). Сократите или разбейте на части.` }, 413);
