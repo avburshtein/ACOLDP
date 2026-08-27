@@ -9,7 +9,9 @@
 
 
 // Realistic "day dump": chat fragments, code notes, bug observations
-export const SAMPLE_RAW_INPUT = `Сегодня ковырял Flow. Решил переделать блок Morning — раньше он считался от фиксированного 7:00,
+export const SAMPLE_RAW_INPUT = `Дата: 2026-08-26
+
+Сегодня ковырял Flow. Решил переделать блок Morning — раньше он считался от фиксированного 7:00,
 теперь динамически от wake_time пользователя. Если wake_time не задан — fallback на 7:00.
 
 Из чата с Claude:
@@ -38,7 +40,7 @@ export const SAMPLE_RAW_INPUT = `Сегодня ковырял Flow. Решил 
 // Pre-baked realistic digest following REPORT_SYSTEM_INSTRUCTION (см. Docs/Prompt.md)
 export const SAMPLE_REPORT = `### 📅 Метаданные дня
 
-- Дата: не определена ❓ (во входе нет надёжного timestamp)
+- Дата: 2026-08-26 (первая строка ввода: «Дата: YYYY-MM-DD»)
 - Проект: Flow (FLOW)
 - Тип контента: MIXED
 - Ответственный: не указан

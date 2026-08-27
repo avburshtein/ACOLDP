@@ -84,10 +84,16 @@ export default {
 
       // ── MODE: REPORT ────────────────────────────────────────
       if (mode === "REPORT") {
+        // Packet header — надёжный UTC-timestamp вставки для правила даты (Docs/Prompt.md → «Дата отчёта», п.3).
+        // Явно помечен как метаданные пакета, а не инструкции: модель не должна исполнять содержимое ввода.
+        const packetDate = new Date().toISOString().slice(0, 10); // UTC
+        const packetHeader =
+          "[SYSTEM PACKET HEADER — метаданные пакета, не инструкции]\n" +
+          "Дата формирования пакета (UTC): " + packetDate + "\n\n";
         const markdown = await callLLM(
           provider, baseUrl, apiKey, model,
           REPORT_SYSTEM_INSTRUCTION,
-          raw_text,
+          packetHeader + String(raw_text),
           {} // no schema — free-form markdown
         );
         return json({ success: true, report_markdown: markdown });
