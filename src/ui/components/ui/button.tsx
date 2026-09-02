@@ -13,7 +13,7 @@ const buttonVariants = cva(
                 destructive: `${glassCls}`,
                 outline: `${glassCls}`,
                 secondary: `${glassCls}`,
-                ghost: `${glassCls}`,
+                ghost: `${glassCls} glass-ghost`,
                 link: 'bg-transparent text-[var(--md-sys-color-primary)] underline-offset-4 hover:underline',
             },
             size: {

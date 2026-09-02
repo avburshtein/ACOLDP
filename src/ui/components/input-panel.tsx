@@ -145,13 +145,14 @@ export function InputPanel({
         <Button
           variant="ghost"
           size="sm"
+          data-destructive
           onClick={onClear}
           disabled={!value || busy}
         >
           <Trash2 className="h-4 w-4" /> Очистить
         </Button>
         <div className="flex-1" />
-        <Button variant="outline" size="sm" onClick={onReport} disabled={busy}>
+        <Button variant="default" size="sm" onClick={onReport} disabled={busy}>
           <FileText className="h-4 w-4" /> Отчёт
         </Button>
         <Button size="sm" onClick={onSync} disabled={busy}>

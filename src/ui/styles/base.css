@@ -266,6 +266,58 @@
   }
   .glass-shadow:disabled { opacity: .45; filter: saturate(.6); }
 
+  /* ==== Тихое стекло: тонкая плашка, почти на поверхности ==== */
+
+  .glass-shadow.glass-ghost {
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.34), rgb(255 255 255 / 0.16));
+    border-color: rgb(255 255 255 / 0.55);
+    box-shadow:
+      0 0 0 1px rgb(95 90 110 / 0.06),
+      inset 1px 2px 2px rgb(150 145 160 / 0.10),
+      inset -1px -1px 0 rgb(255 255 255 / 0.40),
+      -1px 1px 2px rgb(70 65 85 / 0.05),
+      -2px 4px 10px rgb(70 65 85 / 0.08);
+  }
+  .glass-shadow.glass-ghost::before { opacity: 0.35; }  /* дисперсия почти спит */
+  .glass-shadow.glass-ghost svg { color: rgb(70 65 82 / 0.55); }
+
+  /* Hover: стекло оживает — добирает молоко, кромку и парение */
+  .glass-shadow.glass-ghost:hover {
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.72), rgb(255 255 255 / 0.50));
+    border-color: rgb(255 255 255 / 0.90);
+    box-shadow:
+      0 0 0 1px rgb(95 90 110 / 0.10),
+      inset 1px 2px 3px rgb(150 145 160 / 0.18),
+      inset -1px -1px 0 rgb(255 255 255 / 0.65),
+      -1px 2px 4px rgb(70 65 85 / 0.10),
+      -3px 10px 22px rgb(70 65 85 / 0.16);
+  }
+  .glass-shadow.glass-ghost:hover::before { opacity: 1; }
+
+  /* Очистить: опасность проявляется только при наведении */
+  .glass-shadow.glass-ghost[data-destructive]:hover {
+    border-color: rgb(255 175 180 / 0.9);
+  }
+  .glass-shadow.glass-ghost[data-destructive]:hover svg { color: rgb(222 88 96 / 0.9); }
+
+  /* Тёмная тема */
+  :where(.dark, [data-theme="dark"]) .glass-shadow.glass-ghost {
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0.02));
+    border-color: rgb(255 255 255 / 0.10);
+    box-shadow:
+      inset 1px 2px 2px rgb(0 0 0 / 0.20),
+      inset -1px -1px 0 rgb(255 255 255 / 0.04),
+      -1px 1px 2px rgb(0 0 0 / 0.20),
+      -2px 4px 10px rgb(0 0 0 / 0.30);
+  }
+  :where(.dark, [data-theme="dark"]) .glass-shadow.glass-ghost:hover {
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.10), rgb(255 255 255 / 0.05));
+    border-color: rgb(255 255 255 / 0.26);
+  }
+  :where(.dark, [data-theme="dark"]) .glass-shadow.glass-ghost[data-destructive]:hover {
+    border-color: rgb(255 140 145 / 0.55);
+  }
+
   /* ==== Акцент: тёмное дымчатое стекло ==== */
   .glass-accent {
     background: linear-gradient(180deg, rgb(40 37 50 / 0.92), rgb(23 21 31 / 0.95));
