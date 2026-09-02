@@ -155,7 +155,7 @@ export function InputPanel({
         <Button variant="default" size="sm" onClick={onReport} disabled={busy}>
           <FileText className="h-4 w-4" /> Отчёт
         </Button>
-        <Button size="sm" onClick={onSync} disabled={busy}>
+        <Button variant="secondary" size="sm" onClick={onSync} disabled={busy}>
           <Send className="h-4 w-4" /> В Jira
         </Button>
       </div>
