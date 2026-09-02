@@ -12,13 +12,9 @@ export function ThemeToggle({ className }: { className?: string }) {
             aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
             className={cn(
                 'relative inline-flex h-10 w-10 items-center justify-center rounded-full',
-                'border border-[var(--md-sys-color-outline-variant)]',
-                'bg-[var(--md-sys-color-surface)]',
-                'text-[var(--md-sys-color-on-surface)]',
-                'hover:bg-[var(--md-sys-color-surface-variant)]',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--md-sys-color-primary)]',
                 'focus-visible:ring-offset-2',
-                'transition-colors',
+                'transition-all glass glass-shadow',
                 className,
             )}
         >

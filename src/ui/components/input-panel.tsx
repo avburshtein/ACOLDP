@@ -145,7 +145,6 @@ export function InputPanel({
         <Button
           variant="ghost"
           size="sm"
-          className="-ml-3"
           onClick={onClear}
           disabled={!value || busy}
         >
