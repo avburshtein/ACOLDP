@@ -120,11 +120,11 @@ export function InputPanel({
               title="Имя модели (auto — авто-выбор)"
               role="combobox"
               aria-expanded={modelOpen}
-              className="field-surface h-8 w-28 rounded-md pl-2 pr-7 text-button text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] focus-visible:outline-none"
+              className="field-surface h-9 w-28 rounded-md pl-3 pr-8 text-body-md text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] focus-visible:outline-none"
             />
-            {/* Тот же шеврон, что у селектора режимов */}
+            {/* Тот же шеврон и те же отступы, что у селектора режимов (right-3) */}
             <ChevronDown
-              className="pointer-events-none absolute right-1 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50"
+              className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50"
               aria-hidden
             />
             {modelOpen && filteredModels.length > 0 && (
@@ -144,7 +144,7 @@ export function InputPanel({
                       onModelChange(m);
                       setModelOpen(false);
                     }}
-                    className="block w-full cursor-pointer px-2.5 py-1.5 text-left text-button text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-surface-variant)]"
+                    className="block w-full cursor-pointer px-2.5 py-1.5 text-left text-body-md text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-surface-variant)]"
                   >
                     {m}
                   </button>
