@@ -130,7 +130,9 @@ export function InputPanel({
             {modelOpen && filteredModels.length > 0 && (
               <div
                 role="listbox"
-                className="absolute left-0 top-full z-50 mt-1 w-44 overflow-hidden rounded-md border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] py-1 shadow-md"
+                // right-0: карточка имеет overflow-hidden, поле у правого края —
+                // дропдаун раскрывается влево, чтобы не обрезаться контейнером
+                className="absolute right-0 top-full z-50 mt-1 w-44 overflow-hidden rounded-md border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] py-1 shadow-md"
               >
                 {filteredModels.map((m) => (
                   <button
