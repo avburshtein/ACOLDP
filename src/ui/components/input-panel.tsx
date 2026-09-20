@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { BookOpen, CloudUpload, Cpu, FileText, Palette, Play, Send, Trash2 } from 'lucide-react';
+import { BookOpen, ChevronDown, CloudUpload, Cpu, FileText, Palette, Play, Send, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -53,7 +53,11 @@ export function InputPanel({
 }: InputPanelProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [modelOpen, setModelOpen] = useState(false);
   const overLimit = value.length > MAX_INPUT_CHARS;
+  const filteredModels = MODEL_SUGGESTIONS.filter((m) =>
+    m.toLowerCase().includes(model.trim().toLowerCase()),
+  );
 
   const handleFiles = async (files: FileList | null) => {
     if (!files?.length) return;
@@ -98,21 +102,56 @@ export function InputPanel({
           <Button variant="secondary" size="sm" onClick={onDemo} title="Демо-пример без API-ключа">
             <Play className="h-3.5 w-3.5" /> Демо
           </Button>
-          <input
-            value={model}
-            onChange={(e) => onModelChange(e.target.value)}
-            list="model-suggestions"
-            placeholder="auto"
-            title="Имя модели (auto — авто-выбор)"
-            className={cn(
-              'field-surface h-8 w-28 rounded-md px-2 text-button text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] focus-visible:outline-none',
+          {/* Поле модели: свободный ввод + наш дропдаун подсказок (вместо
+              нативного datalist — браузерный шеврон не стилизуется) */}
+          <div className="relative">
+            <input
+              value={model}
+              onChange={(e) => {
+                onModelChange(e.target.value);
+                setModelOpen(true);
+              }}
+              onFocus={() => setModelOpen(true)}
+              onBlur={() => setModelOpen(false)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setModelOpen(false);
+              }}
+              placeholder="auto"
+              title="Имя модели (auto — авто-выбор)"
+              role="combobox"
+              aria-expanded={modelOpen}
+              className="field-surface h-8 w-28 rounded-md pl-2 pr-7 text-button text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] focus-visible:outline-none"
+            />
+            {/* Тот же шеврон, что у селектора режимов */}
+            <ChevronDown
+              className="pointer-events-none absolute right-1 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50"
+              aria-hidden
+            />
+            {modelOpen && filteredModels.length > 0 && (
+              <div
+                role="listbox"
+                className="absolute left-0 top-full z-50 mt-1 w-44 overflow-hidden rounded-md border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] py-1 shadow-md"
+              >
+                {filteredModels.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    role="option"
+                    aria-selected={model === m}
+                    // preventDefault — чтобы blur не закрыл список раньше клика
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      onModelChange(m);
+                      setModelOpen(false);
+                    }}
+                    className="block w-full cursor-pointer px-2.5 py-1.5 text-left text-button text-[var(--md-sys-color-on-surface)] hover:bg-[var(--md-sys-color-surface-variant)]"
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
             )}
-          />
-          <datalist id="model-suggestions">
-            {MODEL_SUGGESTIONS.map((m) => (
-              <option key={m} value={m} />
-            ))}
-          </datalist>
+          </div>
         </div>
       </div>
 
