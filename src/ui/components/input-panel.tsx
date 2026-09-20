@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { BookOpen, CloudUpload, FileText, Palette, Play, Send, Sparkles, Trash2 } from 'lucide-react';
+import { BookOpen, CloudUpload, Cpu, FileText, Palette, Play, Send, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -8,7 +8,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { MAX_INPUT_CHARS, MODE_LABELS, MODE_ACTION_LABEL, MODE_DESCRIPTIONS } from '@/types';
+import {
+  MAX_INPUT_CHARS,
+  MODE_LABELS,
+  MODE_ACTION_LABEL,
+  MODE_DESCRIPTIONS,
+  MODE_MODEL_HINTS,
+  TIMEOUT_WARN_CHARS,
+} from '@/types';
 import type { Mode } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -61,14 +68,14 @@ export function InputPanel({
     onChange(value + parts.join(''));
   };
 
-  const isReportLike = mode === 'REPORT' || mode === 'LEARNING_DIGEST' || mode === 'CASE_DRAFT';
-
   const MODE_ICONS: Record<Mode, React.ElementType> = {
     REPORT: FileText,
     LEARNING_DIGEST: BookOpen,
     CASE_DRAFT: Palette,
     JIRA_SYNC: Send,
   };
+
+  const RunIcon = MODE_ICONS[mode];
 
   const modePlaceholder: Record<Mode, string> = {
     REPORT:
@@ -122,35 +129,27 @@ export function InputPanel({
           </div>
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="REPORT">
-            <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              <span>{MODE_LABELS.REPORT}</span>
-            </div>
+          <SelectItem value="REPORT" icon={<FileText className="h-4 w-4" />}>
+            {MODE_LABELS.REPORT}
           </SelectItem>
-          <SelectItem value="LEARNING_DIGEST">
-            <div className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4" />
-              <span>{MODE_LABELS.LEARNING_DIGEST}</span>
-            </div>
+          <SelectItem value="LEARNING_DIGEST" icon={<BookOpen className="h-4 w-4" />}>
+            {MODE_LABELS.LEARNING_DIGEST}
           </SelectItem>
-          <SelectItem value="CASE_DRAFT">
-            <div className="flex items-center gap-2">
-              <Palette className="h-4 w-4" />
-              <span>{MODE_LABELS.CASE_DRAFT}</span>
-            </div>
-          </SelectItem>
-          <SelectItem value="JIRA_SYNC">
-            <div className="flex items-center gap-2">
-              <Send className="h-4 w-4" />
-              <span>{MODE_LABELS.JIRA_SYNC}</span>
-            </div>
+          <SelectItem value="CASE_DRAFT" icon={<Palette className="h-4 w-4" />}>
+            {MODE_LABELS.CASE_DRAFT}
           </SelectItem>
         </SelectContent>
       </Select>
 
       <p className="text-label-sm leading-snug text-[var(--md-sys-color-on-surface-variant)]">
         {MODE_DESCRIPTIONS[mode]}
+      </p>
+      <p className="flex items-start gap-1.5 text-label-sm leading-snug text-[var(--md-sys-color-on-surface-variant)]">
+        <Cpu className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+        <span>
+          <span className="text-[var(--md-sys-color-on-surface)]">Модель:</span>{' '}
+          {MODE_MODEL_HINTS[mode]}
+        </span>
       </p>
 
       <textarea
@@ -210,6 +209,12 @@ export function InputPanel({
         <span>{value.length.toLocaleString('ru-RU')} символов</span>
         <span>лимит: {MAX_INPUT_CHARS.toLocaleString('ru-RU')}</span>
       </div>
+      {value.length > TIMEOUT_WARN_CHARS && !overLimit && (
+        <p className="px-1 text-xs text-amber-600 dark:text-amber-400">
+          ⚠ Больше {TIMEOUT_WARN_CHARS.toLocaleString('ru-RU')} символов — на медленной модели
+          возможен таймаут 524. Возьмите flash/mini или разбейте текст.
+        </p>
+      )}
 
       {/* Actions */}
       <div className="flex items-center gap-2">
@@ -223,15 +228,9 @@ export function InputPanel({
           <Trash2 className="h-4 w-4" /> Очистить
         </Button>
         <div className="flex-1" />
-        {isReportLike ? (
-          <Button variant="default" size="sm" onClick={() => onRun(mode)} disabled={busy}>
-            <Sparkles className="h-4 w-4" /> {MODE_ACTION_LABEL[mode]}
-          </Button>
-        ) : (
-          <Button variant="default" size="sm" onClick={() => onRun('REPORT')} disabled={busy}>
-            <FileText className="h-4 w-4" /> Отчёт
-          </Button>
-        )}
+        <Button variant="default" size="sm" onClick={() => onRun(mode)} disabled={busy}>
+          <RunIcon className="h-4 w-4" /> {MODE_ACTION_LABEL[mode]}
+        </Button>
         <Button variant="secondary" size="sm" onClick={() => onRun('JIRA_SYNC')} disabled={busy}>
           <Send className="h-4 w-4" /> В Jira
         </Button>

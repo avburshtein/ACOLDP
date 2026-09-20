@@ -57,8 +57,19 @@ export const MODE_DESCRIPTIONS: Record<Mode, string> = {
   CASE_DRAFT:
     'Собирает материалы проекта (чаты, метрики, итерации) в черновик UX-портфолио по шаблону UX42.',
   JIRA_SYNC:
-    'Сравнивает задачи из отчёта с открытыми тикетами в Jira и предлагает создать, обновить или прокомментировать.',
+    'Не генерирует отчёт: берёт раздел «Задачи для синхронизации с Jira», сверяет его с открытыми тикетами и создаёт/обновляет/комментирует их. Нужны Jira-ключи.',
 };
+
+export const MODE_MODEL_HINTS: Record<Mode, string> = {
+  REPORT: 'Подходит любая модель; для входов >30k символов — быстрая (flash/mini).',
+  LEARNING_DIGEST: 'Лучше быстрые модели (flash/mini) — конспекты бывают длинными.',
+  CASE_DRAFT:
+    'Сильный русский язык и контекст ≥128k (glm-4.6, qwen-max, gpt-4o); на длинных входах — flash-версии.',
+  JIRA_SYNC: 'Достаточно быстрой модели — структурная задача (dedup + JSON).',
+};
+
+/** Вход больше этого объёма — риск таймаута 524 (лимит Worker ~30 сек) */
+export const TIMEOUT_WARN_CHARS = 30000;
 
 export interface JiraResult {
   status: 'created' | 'updated' | 'commented' | 'error';

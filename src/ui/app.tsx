@@ -23,7 +23,14 @@ export function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [input, setInput] = useState(() => loadDraft());
   const [model, setModel] = useState('');
-  const [mode, setMode] = useState<Mode>(() => (loadCfg('mode') as Mode) || 'REPORT');
+  // Селектор хранит только режимы создания контента; 'JIRA_SYNC' из старого
+  // localStorage откатываем на REPORT (Jira теперь кнопка-действие, не режим)
+  const [mode, setMode] = useState<Mode>(() => {
+    const saved = loadCfg('mode') as Mode;
+    return saved === 'REPORT' || saved === 'LEARNING_DIGEST' || saved === 'CASE_DRAFT'
+      ? saved
+      : 'REPORT';
+  });
   const [lastReport, setLastReport] = useState('');
   const [lastMode, setLastMode] = useState<Mode>('REPORT');
   const [view, setView] = useState<ResultsView>({ kind: 'placeholder' });
@@ -200,11 +207,14 @@ export function App() {
       .replace(/^-\s+/gm, '• ') // convert list bullets
       .replace(/^\[([ x])\]\s+/gm, (_, checked) => (checked === 'x' ? '☑ ' : '☐ '));
 
-    const url = 'https://docs.google.com/document/create?usp=docs_home&folder=';
-    navigator.clipboard.writeText(plainText).then(() => {
-      show('✓ Текст скопирован — вставьте в новый Google Docs');
-      window.open(url, '_blank');
-    });
+    // Браузер не может вставить текст в чужую вкладку (безопасность), поэтому
+    // честный флоу: копируем в буфер → открываем новый документ → Ctrl+V.
+    // window.open синхронно — иначе popup-blocker может срезать окно.
+    window.open('https://docs.google.com/document/create', '_blank', 'noopener');
+    navigator.clipboard
+      .writeText(plainText)
+      .then(() => show('✓ Текст в буфере — в открывшемся Google Docs нажмите Ctrl+V'))
+      .catch(() => show('Не удалось скопировать — скопируйте текст кнопкой «Копировать»'));
   };
 
   const handleDemo = () => {
