@@ -14,8 +14,7 @@ interface AuthOverlayProps {
   onGuest: () => void;
 }
 
-const inputCls =
-  'bg-[var(--md-sys-color-surface-variant)] border-[var(--md-sys-color-outline-variant)]';
+const inputCls = 'field-surface';
 
 /**
  * Полноэкранный оверлей входа в сессию.
@@ -80,7 +79,7 @@ export function AuthOverlay({ open, defaultProvider, onSubmit, onGuest }: AuthOv
             <select
               value={provider}
               onChange={(e) => setProvider(e.target.value as Provider)}
-              className={`flex h-10 w-full appearance-none rounded-md border px-3 text-button text-[var(--md-sys-color-on-surface)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--md-sys-color-primary)] ${inputCls}`}
+              className={`flex h-10 w-full appearance-none rounded-md px-3 text-button text-[var(--md-sys-color-on-surface)] focus:outline-none ${inputCls}`}
             >
               {Object.entries(PROVIDER_NAMES).map(([value, label]) => (
                 <option key={value} value={value}>

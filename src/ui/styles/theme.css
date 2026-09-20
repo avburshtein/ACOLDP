@@ -38,6 +38,9 @@
 
   /* On-primary-fixed for text inside primary containers */
   --md-sys-color-on-primary-fixed-variant: #333333;
+
+  /* Активный бордер полей — линия из glass-палитры (hover/focus/open) */
+  --md-sys-color-outline-active: rgba(95, 90, 110, 0.35);
 }
 
 /* ── Dark theme: чисто чёрный фон + белые акценты ── */
@@ -76,6 +79,9 @@
 
   /* On-primary-fixed for text inside primary containers */
   --md-sys-color-on-primary-fixed-variant: #cccccc;
+
+  /* Активный бордер полей — линия из glass-палитры (hover/focus/open) */
+  --md-sys-color-outline-active: rgba(255, 255, 255, 0.26);
 }
 
 /* ── Ring offset uses the surface color ── */

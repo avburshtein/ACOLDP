@@ -105,8 +105,7 @@ export function InputPanel({
             placeholder="auto"
             title="Имя модели (auto — авто-выбор)"
             className={cn(
-              'h-8 w-28 rounded-md border bg-[var(--md-sys-color-surface-variant)] px-2 text-button text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)]',
-              'border-[var(--md-sys-color-outline-variant)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--md-sys-color-primary)]',
+              'field-surface h-8 w-28 rounded-md px-2 text-button text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] focus-visible:outline-none',
             )}
           />
           <datalist id="model-suggestions">
@@ -156,7 +155,7 @@ export function InputPanel({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={modePlaceholder[mode]}
-        className="custom-scrollbar min-h-0 flex-1 resize-none rounded-md border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-variant)] p-3.5 font-sans text-body-md leading-relaxed text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--md-sys-color-primary)]"
+        className="custom-scrollbar field-surface min-h-0 flex-1 resize-none rounded-md p-3.5 font-sans text-body-md leading-relaxed text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] focus-visible:outline-none"
       />
 
       {/* Drop zone */}

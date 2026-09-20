@@ -167,7 +167,7 @@ export function SettingsDialog({
                 onChange={(e) => setJiraDomain(e.target.value)}
                 autoComplete="off"
                 placeholder="your-domain.atlassian.net"
-                className="border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)]"
+                className="bg-[var(--md-sys-color-surface)]"
               />
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -180,7 +180,7 @@ export function SettingsDialog({
                   onChange={(e) => setJiraEmail(e.target.value)}
                   autoComplete="off"
                   placeholder="user@gmail.com"
-                  className="border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)]"
+                  className="bg-[var(--md-sys-color-surface)]"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -192,7 +192,7 @@ export function SettingsDialog({
                   onChange={(e) => setJiraToken(e.target.value)}
                   autoComplete="off"
                   placeholder="ATATT..."
-                  className="border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)]"
+                  className="bg-[var(--md-sys-color-surface)]"
                 />
               </div>
             </div>
@@ -208,7 +208,7 @@ export function SettingsDialog({
                 id="cfg-jira-project"
                 value={project || NONE}
                 onChange={(e) => setProject(e.target.value)}
-                className={`flex h-10 w-full appearance-none rounded-md border px-3 text-button text-[var(--md-sys-color-on-surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--md-sys-color-primary)] ${inputCls}`}
+                className="field-surface flex h-10 w-full appearance-none rounded-md px-3 text-button text-[var(--md-sys-color-on-surface)] focus:outline-none"
               >
                 <option value={NONE}>— выберите проект —</option>
                 {projects.map((p) => (

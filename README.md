@@ -35,6 +35,16 @@ GitHub Repo
 Токены Material Design 3 (`--md-sys-color-*`) маппятся на ч/б значения в `src/ui/styles/theme.css`.
 Переключение — атрибут `data-theme="dark|light"` на `<html>`, выбор сохраняется в localStorage.
 
+**Полные правила** — в [`Docs/Design-System.md`](Docs/Design-System.md). Коротко:
+
+- **Кнопки — стекло** (`glass`-система в `base.css`): CTA (`default`), нейтральные
+  (`secondary`), служебные (`ghost`), destructive — единственная кнопка с особым
+  hover-цветом. Иерархия hover: ghost тише, чем secondary/default.
+- **Поля ввода — плоские** (класс `.field-surface`): серый фон `surface-variant`
+  + серый бордер `outline-variant` в покое; на hover/focus/открытом Select бордер
+  подсвечивается токеном `outline-active` (линия из glass-палитры). Фокус — только
+  бордером, без `ring`. Стекло на полях не используется.
+
 **UI-компоненты** (из UX42, адаптированы): Avatar, Badge, Button, Card, Checkbox,
 Dialog, DropdownMenu, FormBox, Input, Label, PageTitle, Select, Skeleton, Switch,
 Tabs, Textarea, Title, Toast.

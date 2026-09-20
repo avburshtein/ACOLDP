@@ -142,6 +142,24 @@
 }
 
 @layer components {
+  /* ── Поля ввода: field-surface ──
+     Единый стиль ПЛОСКИХ контролов (textarea, input, триггер Select).
+     Покой: серый фон surface-variant + серый бордер outline-variant.
+     Актив (hover / focus / открытый select): бордер подсвечивается токеном
+     outline-active — линия из glass-палитры, БЕЗ теней, заливки и перелива.
+     ВАЖНО: фокус-подсветка только бордером, ring не используем. */
+  .field-surface {
+    border: 1px solid var(--md-sys-color-outline-variant);
+    background-color: var(--md-sys-color-surface-variant);
+    transition: border-color .16s ease;
+  }
+  .field-surface:hover,
+  .field-surface:focus,
+  .field-surface:focus-visible,
+  .field-surface[data-state='open'] {
+    border-color: var(--md-sys-color-outline-active);
+  }
+
   .custom-scrollbar::-webkit-scrollbar { width: 4px; }
   .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
   .custom-scrollbar::-webkit-scrollbar-thumb {
