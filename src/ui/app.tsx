@@ -19,9 +19,10 @@ export function App() {
   // Ключи сессии живут только в памяти
   const [session, setSession] = useState<SessionKeys | null>(null);
   const [provider, setProvider] = useState(() => loadCfg('provider'));
-  const [authOpen, setAuthOpen] = useState(
-    () => !!getWorkerUrl() && !loadCfg('guest'),
-  );
+  // Оверлей входа: показываем при первом заходе, пока пользователь не
+  // выбрал гостевой режим (guest-флаг). Worker URL не обязателен заранее —
+  // его можно ввести в ⚙️ Settings или после входа с ключом.
+  const [authOpen, setAuthOpen] = useState(() => !loadCfg('guest'));
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [input, setInput] = useState(() => loadDraft());
   const [model, setModel] = useState('');
