@@ -5,7 +5,7 @@
 
 const CFG_PREFIX = 'acoldp_cfg_';
 
-export type CfgKey = 'provider' | 'base-url' | 'jira-project' | 'worker-url' | 'mode';
+export type CfgKey = 'provider' | 'base-url' | 'jira-project' | 'worker-url' | 'mode' | 'guest';
 
 export function loadCfg(key: CfgKey): string {
   try {

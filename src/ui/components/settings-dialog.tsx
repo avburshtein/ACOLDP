@@ -24,6 +24,8 @@ interface SettingsDialogProps {
   getConfig: () => UserConfig;
   showStatus: (text: string) => void;
   onSaved: () => void;
+  /** Jira-креды из настроек уходят в сессию (память браузера) */
+  onSaveJira: (jira: { jiraDomain: string; jiraEmail: string; jiraToken: string }) => void;
 }
 
 const inputCls =
@@ -35,22 +37,31 @@ export function SettingsDialog({
   getConfig,
   showStatus,
   onSaved,
+  onSaveJira,
 }: SettingsDialogProps) {
   const [baseUrl, setBaseUrl] = useState('');
   const [workerUrl, setWorkerUrl] = useState('');
   const [project, setProject] = useState('');
   const [projects, setProjects] = useState<JiraProject[]>([]);
+  const [jiraDomain, setJiraDomain] = useState('');
+  const [jiraEmail, setJiraEmail] = useState('');
+  const [jiraToken, setJiraToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState('');
 
-  // Каждый раз при открытии — читаем свежие значения из localStorage
+  // Каждый раз при открытии — читаем свежие значения из localStorage и сессии
   useEffect(() => {
     if (!open) return;
     setBaseUrl(loadCfg('base-url'));
     setWorkerUrl(loadCfg('worker-url'));
     setProject(loadCfg('jira-project') || NONE);
+    const cfg = getConfig();
+    setJiraDomain(cfg.jira_domain);
+    setJiraEmail(cfg.jira_email);
+    setJiraToken(cfg.jira_token);
     setProjects([]);
     setLoadError('');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const loadProjects = async () => {
@@ -61,7 +72,7 @@ export function SettingsDialog({
     }
     const cfg = getConfig();
     if (!cfg.jira_domain || !cfg.jira_email || !cfg.jira_token) {
-      showStatus('Заполните Jira-креды при входе в сессию');
+      showStatus('Заполните Jira Domain / Email / Token в настройках');
       return;
     }
     setLoading(true);
@@ -90,8 +101,15 @@ export function SettingsDialog({
       'jira-project': project === NONE ? '' : project,
       provider: loadCfg('provider'), // provider меняется только на auth-экране
       mode: loadCfg('mode') || 'REPORT',
+      guest: loadCfg('guest'),
     };
     (Object.keys(values) as CfgKey[]).forEach((k) => saveCfg(k, values[k]));
+    // Jira-креды живут в памяти сессии — прокидываем их туда же
+    onSaveJira({
+      jiraDomain: jiraDomain.trim(),
+      jiraEmail: jiraEmail.trim(),
+      jiraToken: jiraToken.trim(),
+    });
     onOpenChange(false);
     showStatus('✓ Настройки сохранены');
     onSaved();
@@ -104,8 +122,8 @@ export function SettingsDialog({
         <DialogHeader>
           <DialogTitle>Настройки</DialogTitle>
           <DialogDescription>
-            Провайдер и API-ключ задаются при входе в сессию. Здесь — только
-            дополнительные настройки.
+            Служебные адреса и Jira-креды. Провайдер и API-ключ — на экране
+            входа; Jira нужна только для кнопки «В Jira».
           </DialogDescription>
         </DialogHeader>
 
@@ -133,6 +151,53 @@ export function SettingsDialog({
             <p className="text-label-sm text-[var(--md-sys-color-on-surface-variant)]">
               Адрес воркера API (*workers.dev), не сайта. Твой:{' '}
               <code className="font-mono">ai-orchestrator-api.av-burshtein.workers.dev</code>
+            </p>
+          </div>
+
+          {/* Jira — опционально, только для кнопки «В Jira» */}
+          <div className="space-y-3 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-variant)] p-3">
+            <p className="text-label-md font-medium text-[var(--md-sys-color-on-surface)]">
+              Jira — опционально (для кнопки «В Jira»)
+            </p>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="cfg-jira-domain">Jira Domain</Label>
+              <Input
+                id="cfg-jira-domain"
+                value={jiraDomain}
+                onChange={(e) => setJiraDomain(e.target.value)}
+                autoComplete="off"
+                placeholder="your-domain.atlassian.net"
+                className="border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)]"
+              />
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="cfg-jira-email">Jira Email</Label>
+                <Input
+                  id="cfg-jira-email"
+                  type="email"
+                  value={jiraEmail}
+                  onChange={(e) => setJiraEmail(e.target.value)}
+                  autoComplete="off"
+                  placeholder="user@gmail.com"
+                  className="border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)]"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="cfg-jira-token">Jira Token</Label>
+                <Input
+                  id="cfg-jira-token"
+                  type="password"
+                  value={jiraToken}
+                  onChange={(e) => setJiraToken(e.target.value)}
+                  autoComplete="off"
+                  placeholder="ATATT..."
+                  className="border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)]"
+                />
+              </div>
+            </div>
+            <p className="text-label-sm text-[var(--md-sys-color-on-surface-variant)]">
+              Хранятся только в памяти браузера до закрытия вкладки.
             </p>
           </div>
 

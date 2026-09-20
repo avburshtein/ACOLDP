@@ -19,7 +19,9 @@ export function App() {
   // Ключи сессии живут только в памяти
   const [session, setSession] = useState<SessionKeys | null>(null);
   const [provider, setProvider] = useState(() => loadCfg('provider'));
-  const [authOpen, setAuthOpen] = useState(() => !!getWorkerUrl());
+  const [authOpen, setAuthOpen] = useState(
+    () => !!getWorkerUrl() && !loadCfg('guest'),
+  );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [input, setInput] = useState(() => loadDraft());
   const [model, setModel] = useState('');
@@ -94,7 +96,8 @@ export function App() {
     setView({ kind: 'loading', seconds: 0 });
 
     const workerUrl = getWorkerUrl();
-    if (!workerUrl) {
+    // Гость (нет ключа) или нет воркера — работаем на демо-данных
+    if (!workerUrl || !session?.apiKey) {
       await sleep(900);
       let sample = SAMPLE_REPORT;
       let demoMode: Mode = 'REPORT';
@@ -240,14 +243,31 @@ export function App() {
     });
     setProvider(s.provider);
     saveCfg('provider', s.provider);
+    saveCfg('guest', ''); // реальный вход сбрасывает гостевой флаг
     setAuthOpen(false);
     show(
       `✓ Сессия: ${PROVIDER_NAMES[s.provider] || s.provider}. Ключи в памяти браузера.`,
     );
   };
 
+  const handleGuest = () => {
+    saveCfg('guest', '1');
+    setAuthOpen(false);
+    show('✓ Гостевой вход — демо-данные без ключей. Ключи можно добавить через «Демо-режим» → вход.');
+  };
+
+  const handleSaveJira = (jira: { jiraDomain: string; jiraEmail: string; jiraToken: string }) => {
+    setSession((s) => ({
+      apiKey: s?.apiKey ?? '',
+      jiraDomain: jira.jiraDomain,
+      jiraEmail: jira.jiraEmail,
+      jiraToken: jira.jiraToken,
+    }));
+  };
+
   const handleLogout = () => {
     setSession(null);
+    saveCfg('guest', '');
     setAuthOpen(true);
     show('✓ Сессия завершена. Ключи удалены из памяти.');
   };
@@ -262,12 +282,14 @@ export function App() {
         open={authOpen}
         defaultProvider={provider}
         onSubmit={handleAuthSubmit}
+        onGuest={handleGuest}
       />
       <SettingsDialog
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
         getConfig={buildConfig}
         showStatus={show}
+        onSaveJira={handleSaveJira}
         onSaved={() => {
           if (getWorkerUrl() && !session) setAuthOpen(true);
         }}
@@ -278,12 +300,19 @@ export function App() {
           AI Context Orchestrator
         </h1>
         <div className="flex items-center gap-2">
-          {session ? (
+          {session?.apiKey ? (
             <Badge variant="surface">
               {PROVIDER_NAMES[provider] || provider}
             </Badge>
           ) : (
-            <Badge variant="outline">Демо-режим</Badge>
+            <button
+              type="button"
+              onClick={() => setAuthOpen(true)}
+              title="Гостевой режим. Нажмите, чтобы войти с API-ключом"
+              className="cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--md-sys-color-primary)] focus-visible:ring-offset-2"
+            >
+              <Badge variant="outline">Демо-режим</Badge>
+            </button>
           )}
           <ThemeToggle />
           <button

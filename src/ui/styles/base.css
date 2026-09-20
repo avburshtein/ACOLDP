@@ -242,15 +242,6 @@
     border-color: rgb(255 255 255 / 0.26);
   }
 
-  /* Открытый Select-триггер: светится как кнопка на hover —
-     кромка и блик на полную, микроподъём, бордер как у hover */
-  .glass-shadow[data-state='open']::after,
-  .glass-shadow[data-state='open']::before { opacity: 1; }
-  .glass-shadow[data-state='open'] { transform: translateY(-1px); }
-  :where(.dark, [data-theme="dark"]) .glass-shadow[data-state='open'] {
-    border-color: rgb(255 255 255 / 0.26);
-  }
-
   /* Active: стекло прижали к поверхности — парение схлопнулось, толщина глубже */
   .glass-shadow:active {
     transform: translateY(0);

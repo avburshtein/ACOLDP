@@ -16,14 +16,14 @@ const SelectTrigger = React.forwardRef<
     <SelectPrimitive.Trigger
         ref={ref}
         className={cn(
-            // Стекло как у secondary-кнопок: пластинка + переливающаяся кромка (::before)
-            // и спекулярный блик (::after). Стиль открытого состояния живёт в base.css —
-            // рядом с hover-правилами стекла (Tailwind-варианты before/after затирают
-            // content псевдоэлементов, поэтому туда их не переносим)
-            'glass glass-shadow flex h-10 w-full items-center justify-between rounded-md px-3 py-2 text-body-md text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] [&>span]:line-clamp-1',
-            'focus:outline-none',
-            // Клавиатурный фокус: бордер чуть заметнее
-            'focus-visible:border-[rgba(95,90,110,0.45)] dark:focus-visible:border-[rgba(255,255,255,0.35)]',
+            'flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-body-md text-[var(--md-sys-color-on-surface)] transition-colors placeholder:text-[var(--md-sys-color-on-surface-variant)] [&>span]:line-clamp-1',
+            // Покой: как textarea и поле модели — серый фон + серый бордер
+            'border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-variant)]',
+            // Актив (открыт/hover/клавиатурный фокус): красивый бордер из стекла,
+            // но без заливки/теней/перелива — только линия
+            'hover:border-[rgba(95,90,110,0.35)] dark:hover:border-[rgba(255,255,255,0.26)]',
+            'data-[state=open]:border-[rgba(95,90,110,0.35)] dark:data-[state=open]:border-[rgba(255,255,255,0.26)]',
+            'focus-visible:border-[rgba(95,90,110,0.35)] dark:focus-visible:border-[rgba(255,255,255,0.26)] focus-visible:outline-none focus:outline-none',
             'disabled:cursor-not-allowed disabled:opacity-50',
             className,
         )}

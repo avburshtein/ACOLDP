@@ -10,6 +10,8 @@ interface AuthOverlayProps {
   open: boolean;
   defaultProvider: string;
   onSubmit: (session: SessionKeys & { provider: string }) => void;
+  /** Гостевой вход — без ключей, для просмотра демо */
+  onGuest: () => void;
 }
 
 const inputCls =
@@ -19,14 +21,11 @@ const inputCls =
  * Полноэкранный оверлей входа в сессию.
  * Ключи живут только в памяти браузера и очищаются при logout/перезагрузке.
  */
-export function AuthOverlay({ open, defaultProvider, onSubmit }: AuthOverlayProps) {
+export function AuthOverlay({ open, defaultProvider, onSubmit, onGuest }: AuthOverlayProps) {
   const [provider, setProvider] = useState<Provider>(
     (defaultProvider as Provider) || 'google',
   );
   const [apiKey, setApiKey] = useState('');
-  const [domain, setDomain] = useState('');
-  const [email, setEmail] = useState('');
-  const [token, setToken] = useState('');
   const [error, setError] = useState('');
 
   if (!open) return null;
@@ -41,13 +40,12 @@ export function AuthOverlay({ open, defaultProvider, onSubmit }: AuthOverlayProp
     onSubmit({
       provider,
       apiKey: apiKey.trim(),
-      jiraDomain: domain.trim(),
-      jiraEmail: email.trim(),
-      jiraToken: token.trim(),
+      jiraDomain: '',
+      jiraEmail: '',
+      jiraToken: '',
     });
     //Sensitive fields — clear from DOM immediately
     setApiKey('');
-    setToken('');
   };
 
   return (
@@ -61,7 +59,7 @@ export function AuthOverlay({ open, defaultProvider, onSubmit }: AuthOverlayProp
             ACOLDP Orchestrator
           </h2>
           <p className="mt-1 text-body-sm text-[var(--md-sys-color-on-surface-variant)]">
-            Подключите свои API-ключи
+            Подключите свои API-ключи или войдите гостем
           </p>
         </div>
 
@@ -104,42 +102,6 @@ export function AuthOverlay({ open, defaultProvider, onSubmit }: AuthOverlayProp
           </div>
         </div>
 
-        <div>
-          <Label className="text-xs">Jira Domain</Label>
-          <Input
-            value={domain}
-            onChange={(e) => setDomain(e.target.value)}
-            autoComplete="off"
-            placeholder="your-domain.atlassian.net"
-            className={inputCls}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div>
-            <Label className="text-xs">Jira Email</Label>
-            <Input
-              type="email"
-              autoComplete="off"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="user@gmail.com"
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <Label className="text-xs">Jira Token</Label>
-            <Input
-              type="password"
-              autoComplete="off"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              placeholder="ATATT..."
-              className={inputCls}
-            />
-          </div>
-        </div>
-
         {error && (
           <p className="text-label-md text-red-400" role="alert">
             {error}
@@ -148,6 +110,9 @@ export function AuthOverlay({ open, defaultProvider, onSubmit }: AuthOverlayProp
 
         <Button type="submit" className="w-full">
           Войти
+        </Button>
+        <Button type="button" variant="secondary" className="w-full" onClick={onGuest} title="Посмотреть интерфейс и демо без ключей">
+          Гостевой вход — демо без ключей
         </Button>
       </form>
     </div>
