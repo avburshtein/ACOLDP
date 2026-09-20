@@ -89,6 +89,7 @@ export function SettingsDialog({
       'worker-url': workerUrl.trim(),
       'jira-project': project === NONE ? '' : project,
       provider: loadCfg('provider'), // provider меняется только на auth-экране
+      mode: loadCfg('mode') || 'REPORT',
     };
     (Object.keys(values) as CfgKey[]).forEach((k) => saveCfg(k, values[k]));
     onOpenChange(false);

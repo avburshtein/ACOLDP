@@ -33,7 +33,32 @@ export interface UserConfig {
   jira_token: string;
 }
 
-export type Mode = 'REPORT' | 'JIRA_SYNC';
+export type Mode = 'REPORT' | 'LEARNING_DIGEST' | 'CASE_DRAFT' | 'JIRA_SYNC';
+
+export const MODE_LABELS: Record<Mode, string> = {
+  REPORT: 'Отчёт',
+  LEARNING_DIGEST: 'Дайджест',
+  CASE_DRAFT: 'Кейс UX42',
+  JIRA_SYNC: 'В Jira',
+};
+
+export const MODE_ACTION_LABEL: Record<Mode, string> = {
+  REPORT: 'Отчёт',
+  LEARNING_DIGEST: 'Дайджест',
+  CASE_DRAFT: 'Кейс',
+  JIRA_SYNC: 'В Jira',
+};
+
+export const MODE_DESCRIPTIONS: Record<Mode, string> = {
+  REPORT:
+    'Структурирует сырые заметки, чаты и идеи в ежедневный отчёт с метриками, блокерами и задачами.',
+  LEARNING_DIGEST:
+    'Превращает конспекты, выдержки из книг и курсов в структурированный дайджест с ключевыми концепциями и action items.',
+  CASE_DRAFT:
+    'Собирает материалы проекта (чаты, метрики, итерации) в черновик UX-портфолио по шаблону UX42.',
+  JIRA_SYNC:
+    'Сравнивает задачи из отчёта с открытыми тикетами в Jira и предлагает создать, обновить или прокомментировать.',
+};
 
 export interface JiraResult {
   status: 'created' | 'updated' | 'commented' | 'error';

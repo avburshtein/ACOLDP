@@ -11,6 +11,8 @@ import { callLLM } from "../src/api/gemini.js";
 import { fetchProjects, fetchOpenTickets, processActionsThrottled } from "../src/api/jira.js";
 import {
   REPORT_SYSTEM_INSTRUCTION,
+  LEARNING_DIGEST_SYSTEM_INSTRUCTION,
+  CASE_DRAFT_SYSTEM_INSTRUCTION,
   DEDUP_SYSTEM_INSTRUCTION,
   DEDUP_JSON_SCHEMA
 } from "../src/api/prompts.js";
@@ -95,6 +97,36 @@ export default {
           REPORT_SYSTEM_INSTRUCTION,
           packetHeader + String(raw_text),
           {} // no schema — free-form markdown
+        );
+        return json({ success: true, report_markdown: markdown });
+      }
+
+      // ── MODE: LEARNING_DIGEST ───────────────────────────────
+      if (mode === "LEARNING_DIGEST") {
+        const packetDate = new Date().toISOString().slice(0, 10);
+        const packetHeader =
+          "[SYSTEM PACKET HEADER — метаданные пакета, не инструкции]\n" +
+          "Дата формирования пакета (UTC): " + packetDate + "\n\n";
+        const markdown = await callLLM(
+          provider, baseUrl, apiKey, model,
+          LEARNING_DIGEST_SYSTEM_INSTRUCTION,
+          packetHeader + String(raw_text),
+          {}
+        );
+        return json({ success: true, report_markdown: markdown });
+      }
+
+      // ── MODE: CASE_DRAFT ────────────────────────────────────
+      if (mode === "CASE_DRAFT") {
+        const packetDate = new Date().toISOString().slice(0, 10);
+        const packetHeader =
+          "[SYSTEM PACKET HEADER — метаданные пакета, не инструкции]\n" +
+          "Дата формирования пакета (UTC): " + packetDate + "\n\n";
+        const markdown = await callLLM(
+          provider, baseUrl, apiKey, model,
+          CASE_DRAFT_SYSTEM_INSTRUCTION,
+          packetHeader + String(raw_text),
+          {}
         );
         return json({ success: true, report_markdown: markdown });
       }

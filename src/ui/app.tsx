@@ -11,9 +11,9 @@ import { Card } from '@/components/ui/card';
 import { api } from '@/lib/api';
 import { getWorkerUrl, loadCfg, loadDraft, saveCfg, saveDraft } from '@/lib/storage';
 import { sleep } from '@/lib/utils';
-import { SAMPLE_RAW_INPUT, SAMPLE_REPORT } from '@/demo-data';
+import { SAMPLE_RAW_INPUT, SAMPLE_REPORT, SAMPLE_LEARNING_DIGEST, SAMPLE_CASE_DRAFT } from '@/demo-data';
 import { MAX_INPUT_CHARS, PROVIDER_NAMES } from '@/types';
-import type { SessionKeys, UserConfig } from '@/types';
+import type { Mode, SessionKeys, UserConfig } from '@/types';
 
 export function App() {
   // Ключи сессии живут только в памяти
@@ -23,7 +23,9 @@ export function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [input, setInput] = useState(() => loadDraft());
   const [model, setModel] = useState('');
+  const [mode, setMode] = useState<Mode>(() => (loadCfg('mode') as Mode) || 'REPORT');
   const [lastReport, setLastReport] = useState('');
+  const [lastMode, setLastMode] = useState<Mode>('REPORT');
   const [view, setView] = useState<ResultsView>({ kind: 'placeholder' });
   const { message, visible, show } = useStatus();
   const busy = view.kind === 'loading';
@@ -67,7 +69,7 @@ export function App() {
   }, [view.kind]);
 
   const sendRequest = async (
-    mode: 'REPORT' | 'JIRA_SYNC',
+    targetMode: Mode,
     textOverride?: string,
   ) => {
     const text = (textOverride ?? input).trim();
@@ -86,31 +88,53 @@ export function App() {
 
     const workerUrl = getWorkerUrl();
     if (!workerUrl) {
-      if (mode === 'REPORT') {
-        await sleep(900);
-        setLastReport(SAMPLE_REPORT);
-        setView({ kind: 'report', markdown: SAMPLE_REPORT, demo: true });
-      } else {
+      await sleep(900);
+      let sample = SAMPLE_REPORT;
+      let demoMode: Mode = 'REPORT';
+      if (targetMode === 'LEARNING_DIGEST') {
+        sample = SAMPLE_LEARNING_DIGEST;
+        demoMode = 'LEARNING_DIGEST';
+      } else if (targetMode === 'CASE_DRAFT') {
+        sample = SAMPLE_CASE_DRAFT;
+        demoMode = 'CASE_DRAFT';
+      } else if (targetMode === 'JIRA_SYNC') {
         setView({
           kind: 'error',
           message:
             'Демо-режим: синхронизация с Jira недоступна. Чтобы включить — укажите Worker API URL и Jira-креды в ⚙️ Settings.',
         });
+        return;
       }
+      setLastReport(sample);
+      setLastMode(demoMode);
+      setView({ kind: 'report', markdown: sample, demo: true, mode: demoMode });
       return;
     }
 
     try {
       const config = buildConfig();
       const modelValue = model.trim();
-      // «auto» в любом регистре → пустая строка: сервер сам выберет модель
       const modelParam = modelValue.toUpperCase() === 'AUTO' ? '' : modelValue;
-      if (mode === 'REPORT') {
+
+      if (targetMode === 'REPORT') {
         const data = await api.report(workerUrl, text, modelParam, config);
         setLastReport(data.report_markdown);
-        setView({ kind: 'report', markdown: data.report_markdown, demo: false });
+        setLastMode('REPORT');
+        setView({ kind: 'report', markdown: data.report_markdown, demo: false, mode: 'REPORT' });
         show('✓ Отчёт готов');
-      } else {
+      } else if (targetMode === 'LEARNING_DIGEST') {
+        const data = await api.learningDigest(workerUrl, text, modelParam, config);
+        setLastReport(data.report_markdown);
+        setLastMode('LEARNING_DIGEST');
+        setView({ kind: 'report', markdown: data.report_markdown, demo: false, mode: 'LEARNING_DIGEST' });
+        show('✓ Дайджест готов');
+      } else if (targetMode === 'CASE_DRAFT') {
+        const data = await api.caseDraft(workerUrl, text, modelParam, config);
+        setLastReport(data.report_markdown);
+        setLastMode('CASE_DRAFT');
+        setView({ kind: 'report', markdown: data.report_markdown, demo: false, mode: 'CASE_DRAFT' });
+        show('✓ Кейс готов');
+      } else if (targetMode === 'JIRA_SYNC') {
         const data = await api.jiraSync(workerUrl, text, modelParam, config);
         setView({
           kind: 'sync',
@@ -146,17 +170,41 @@ export function App() {
   const handleDownload = () => {
     if (!lastReport) return;
     const date = new Date().toISOString().slice(0, 10);
+    const prefix: Record<Mode, string> = {
+      REPORT: 'Report',
+      LEARNING_DIGEST: 'Digest',
+      CASE_DRAFT: 'Case',
+      JIRA_SYNC: 'Report',
+    };
     const blob = new Blob([lastReport], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
     const a = Object.assign(document.createElement('a'), {
       href: url,
-      download: `ACOLDP_Report_${date}.md`,
+      download: `ACOLDP_${prefix[lastMode]}_${date}.md`,
     });
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
     show('✓ Файл скачан');
+  };
+
+  const handleGoogleDocs = () => {
+    if (!lastReport) return;
+    // Convert markdown to plain text for Google Docs
+    const plainText = lastReport
+      .replace(/^---[\s\S]*?---\n?/gm, '') // remove YAML frontmatter
+      .replace(/#{1,6}\s+/g, '') // remove heading markers
+      .replace(/\*\*|__/g, '') // remove bold/italic
+      .replace(/`{1,3}/g, '') // remove code fences
+      .replace(/^-\s+/gm, '• ') // convert list bullets
+      .replace(/^\[([ x])\]\s+/gm, (_, checked) => (checked === 'x' ? '☑ ' : '☐ '));
+
+    const url = 'https://docs.google.com/document/create?usp=docs_home&folder=';
+    navigator.clipboard.writeText(plainText).then(() => {
+      show('✓ Текст скопирован — вставьте в новый Google Docs');
+      window.open(url, '_blank');
+    });
   };
 
   const handleDemo = () => {
@@ -258,10 +306,14 @@ export function App() {
             onChange={setInput}
             model={model}
             onModelChange={setModel}
+            mode={mode}
+            onModeChange={(m) => {
+              setMode(m);
+              saveCfg('mode', m);
+            }}
             onDemo={handleDemo}
             onClear={handleClear}
-            onReport={() => void sendRequest('REPORT')}
-            onSync={() => void sendRequest('JIRA_SYNC')}
+            onRun={(m) => void sendRequest(m)}
             busy={busy}
           />
         </Card>
@@ -271,6 +323,7 @@ export function App() {
             onConvert={handleConvert}
             onCopy={handleCopy}
             onDownload={handleDownload}
+            onGoogleDocs={handleGoogleDocs}
           />
         </Card>
       </main>

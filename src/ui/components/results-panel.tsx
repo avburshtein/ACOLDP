@@ -1,12 +1,13 @@
-import { Copy, Download, Sparkles } from 'lucide-react';
+import { Copy, Download, ExternalLink, FileText, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { JiraResult, SyncStats } from '@/types';
+import type { JiraResult, Mode, SyncStats } from '@/types';
+import { MODE_LABELS } from '@/types';
 import { cn } from '@/lib/utils';
 
 export type ResultsView =
   | { kind: 'placeholder' }
   | { kind: 'loading'; seconds: number }
-  | { kind: 'report'; markdown: string; demo: boolean }
+  | { kind: 'report'; markdown: string; demo: boolean; mode: Mode }
   | { kind: 'sync'; stats?: SyncStats; results: JiraResult[]; demo: boolean }
   | { kind: 'error'; message: string };
 
@@ -15,6 +16,7 @@ interface ResultsPanelProps {
   onConvert: () => void;
   onCopy: () => void;
   onDownload: () => void;
+  onGoogleDocs: () => void;
 }
 
 function loadingHint(s: number): string {
@@ -41,6 +43,7 @@ export function ResultsPanel({
   onConvert,
   onCopy,
   onDownload,
+  onGoogleDocs,
 }: ResultsPanelProps) {
   return (
     <section className="flex h-full flex-col gap-3 p-4">
@@ -50,13 +53,19 @@ export function ResultsPanel({
         </h2>
         {view.kind === 'report' && (
           <div className="flex items-center gap-1.5">
+            <span className="text-label-sm text-[var(--md-sys-color-on-surface-variant)] mr-1">
+              {MODE_LABELS[view.mode]}
+            </span>
             <Button
               variant="default"
               size="sm"
               onClick={onConvert}
-              title="Отправить отчёт в Jira как входные данные"
+              title="Отправить результат в Jira как входные данные"
             >
-              В тикеты
+              <FileText className="h-3.5 w-3.5 mr-1" /> В тикеты
+            </Button>
+            <Button variant="ghost" size="icon" onClick={onGoogleDocs} title="Открыть в Google Docs">
+              <ExternalLink className="h-4 w-4" />
             </Button>
             <Button variant="ghost" size="icon" onClick={onCopy} title="Копировать">
               <Copy className="h-4 w-4" />

@@ -63,6 +63,24 @@ export const api = {
     });
   },
 
+  learningDigest(workerUrl: string, text: string, model: string, config: UserConfig) {
+    return post<ReportResponse>(workerUrl, {
+      raw_text: text,
+      mode: 'LEARNING_DIGEST',
+      selected_model: model,
+      user_config: config,
+    });
+  },
+
+  caseDraft(workerUrl: string, text: string, model: string, config: UserConfig) {
+    return post<ReportResponse>(workerUrl, {
+      raw_text: text,
+      mode: 'CASE_DRAFT',
+      selected_model: model,
+      user_config: config,
+    });
+  },
+
   jiraProjects(workerUrl: string, config: UserConfig) {
     return post<ProjectsResponse>(workerUrl, {
       mode: 'JIRA_PROJECTS',

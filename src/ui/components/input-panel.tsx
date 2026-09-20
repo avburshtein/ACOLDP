@@ -1,7 +1,15 @@
 import { useRef, useState } from 'react';
-import { CloudUpload, FileText, Play, Send, Trash2 } from 'lucide-react';
+import { BookOpen, CloudUpload, FileText, Palette, Play, Send, Sparkles, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { MAX_INPUT_CHARS } from '@/types';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { MAX_INPUT_CHARS, MODE_LABELS, MODE_ACTION_LABEL, MODE_DESCRIPTIONS } from '@/types';
+import type { Mode } from '@/types';
 import { cn } from '@/lib/utils';
 
 const MODEL_SUGGESTIONS = [
@@ -16,10 +24,11 @@ interface InputPanelProps {
   onChange: (value: string) => void;
   model: string;
   onModelChange: (model: string) => void;
+  mode: Mode;
+  onModeChange: (mode: Mode) => void;
   onDemo: () => void;
   onClear: () => void;
-  onReport: () => void;
-  onSync: () => void;
+  onRun: (mode: Mode) => void;
   busy: boolean;
 }
 
@@ -28,10 +37,11 @@ export function InputPanel({
   onChange,
   model,
   onModelChange,
+  mode,
+  onModeChange,
   onDemo,
   onClear,
-  onReport,
-  onSync,
+  onRun,
   busy,
 }: InputPanelProps) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -49,6 +59,26 @@ export function InputPanel({
       }
     }
     onChange(value + parts.join(''));
+  };
+
+  const isReportLike = mode === 'REPORT' || mode === 'LEARNING_DIGEST' || mode === 'CASE_DRAFT';
+
+  const MODE_ICONS: Record<Mode, React.ElementType> = {
+    REPORT: FileText,
+    LEARNING_DIGEST: BookOpen,
+    CASE_DRAFT: Palette,
+    JIRA_SYNC: Send,
+  };
+
+  const modePlaceholder: Record<Mode, string> = {
+    REPORT:
+      'Вставьте текст, идеи, ответ AI, экспорт чата...\n\nПоддерживается любой формат:\n— свободные мысли\n— скопированный ответ из Claude/ChatGPT\n— экспорт чата из Kimi/Qwen',
+    LEARNING_DIGEST:
+      'Вставьте заметки, конспект, выдержки из книги, статьи или курса...\n\nЧто подходит:\n— заметки из книги\n— выдержки из статьи\n— конспект лекции\n— экспорт highlights',
+    CASE_DRAFT:
+      'Вставьте материалы проекта: логи обсуждений, заметки, скриншоты (опишите текстом), метрики...\n\nЧто подходит:\n— чат команды\n— заметки исследования\n— описание итераций\n— метрики до/после',
+    JIRA_SYNC:
+      'Вставьте отчёт или список задач для синхронизации с Jira...',
   };
 
   return (
@@ -80,12 +110,53 @@ export function InputPanel({
         </div>
       </div>
 
+      {/* Mode selector */}
+      <Select value={mode} onValueChange={(v) => onModeChange(v as Mode)}>
+        <SelectTrigger className="h-9 w-full">
+          <div className="flex items-center gap-2">
+            {(() => {
+              const Icon = MODE_ICONS[mode];
+              return <Icon className="h-4 w-4" />;
+            })()}
+            <SelectValue placeholder="Выберите режим" />
+          </div>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="REPORT">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              <span>{MODE_LABELS.REPORT}</span>
+            </div>
+          </SelectItem>
+          <SelectItem value="LEARNING_DIGEST">
+            <div className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
+              <span>{MODE_LABELS.LEARNING_DIGEST}</span>
+            </div>
+          </SelectItem>
+          <SelectItem value="CASE_DRAFT">
+            <div className="flex items-center gap-2">
+              <Palette className="h-4 w-4" />
+              <span>{MODE_LABELS.CASE_DRAFT}</span>
+            </div>
+          </SelectItem>
+          <SelectItem value="JIRA_SYNC">
+            <div className="flex items-center gap-2">
+              <Send className="h-4 w-4" />
+              <span>{MODE_LABELS.JIRA_SYNC}</span>
+            </div>
+          </SelectItem>
+        </SelectContent>
+      </Select>
+
+      <p className="text-label-sm leading-snug text-[var(--md-sys-color-on-surface-variant)]">
+        {MODE_DESCRIPTIONS[mode]}
+      </p>
+
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={
-          'Вставьте текст, идеи, ответ AI, экспорт чата...\n\nПоддерживается любой формат:\n— свободные мысли\n— скопированный ответ из Claude/ChatGPT\n— экспорт чата из Kimi/Qwen'
-        }
+        placeholder={modePlaceholder[mode]}
         className="custom-scrollbar min-h-0 flex-1 resize-none rounded-md border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-variant)] p-3.5 font-sans text-body-md leading-relaxed text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--md-sys-color-primary)]"
       />
 
@@ -152,10 +223,16 @@ export function InputPanel({
           <Trash2 className="h-4 w-4" /> Очистить
         </Button>
         <div className="flex-1" />
-        <Button variant="default" size="sm" onClick={onReport} disabled={busy}>
-          <FileText className="h-4 w-4" /> Отчёт
-        </Button>
-        <Button variant="secondary" size="sm" onClick={onSync} disabled={busy}>
+        {isReportLike ? (
+          <Button variant="default" size="sm" onClick={() => onRun(mode)} disabled={busy}>
+            <Sparkles className="h-4 w-4" /> {MODE_ACTION_LABEL[mode]}
+          </Button>
+        ) : (
+          <Button variant="default" size="sm" onClick={() => onRun('REPORT')} disabled={busy}>
+            <FileText className="h-4 w-4" /> Отчёт
+          </Button>
+        )}
+        <Button variant="secondary" size="sm" onClick={() => onRun('JIRA_SYNC')} disabled={busy}>
           <Send className="h-4 w-4" /> В Jira
         </Button>
       </div>
