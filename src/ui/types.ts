@@ -64,7 +64,7 @@ export const MODE_MODEL_HINTS: Record<Mode, string> = {
   REPORT: 'Подходит любая модель; для входов >30k символов — быстрая (flash/mini).',
   LEARNING_DIGEST: 'Лучше быстрые модели (flash/mini) — конспекты бывают длинными.',
   CASE_DRAFT:
-    'Сильный русский язык и контекст ≥128k (glm-4.6, qwen-max, gpt-4o); на длинных входах — flash-версии.',
+    'Сильная модель (glm-4.6, qwen-max, gpt-4o); на длинных входах — flash-версии.',
   JIRA_SYNC: 'Достаточно быстрой модели — структурная задача (dedup + JSON).',
 };
 

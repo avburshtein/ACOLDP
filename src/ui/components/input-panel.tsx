@@ -95,7 +95,7 @@ export function InputPanel({
           1. Входные данные
         </h2>
         <div className="flex items-center gap-1.5">
-          <Button variant="ghost" size="sm" onClick={onDemo} title="Демо-пример без API-ключа">
+          <Button variant="secondary" size="sm" onClick={onDemo} title="Демо-пример без API-ключа">
             <Play className="h-3.5 w-3.5" /> Демо
           </Button>
           <input

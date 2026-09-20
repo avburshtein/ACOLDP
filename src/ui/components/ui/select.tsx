@@ -16,7 +16,15 @@ const SelectTrigger = React.forwardRef<
     <SelectPrimitive.Trigger
         ref={ref}
         className={cn(
-            'flex h-10 w-full items-center justify-between rounded-md border border-[var(--md-sys-color-outline)] bg-[var(--md-sys-color-surface)] px-3 py-2 text-body-md text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] focus:outline-none focus:ring-2 focus:ring-[var(--md-sys-color-primary)] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1',
+            'flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-body-md text-[var(--md-sys-color-on-surface)] transition-colors placeholder:text-[var(--md-sys-color-on-surface-variant)] [&>span]:line-clamp-1',
+            // Покой: серый бордер как у textarea, без серой заливки
+            'border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)]',
+            // Актив (открыт/фокус): бордер как у secondary glass-кнопки — без яркого ring
+            'data-[state=open]:border-[rgba(255,255,255,0.9)] data-[state=open]:shadow-[0_0_0_1px_rgba(95,90,110,0.10)]',
+            'focus-visible:border-[rgba(255,255,255,0.9)] focus-visible:shadow-[0_0_0_1px_rgba(95,90,110,0.10)] focus-visible:outline-none',
+            'dark:data-[state=open]:border-[rgba(255,255,255,0.26)] dark:data-[state=open]:shadow-none',
+            'dark:focus-visible:border-[rgba(255,255,255,0.26)] dark:focus-visible:shadow-none',
+            'disabled:cursor-not-allowed disabled:opacity-50',
             className,
         )}
         {...props}
