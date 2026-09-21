@@ -81,6 +81,27 @@ export const api = {
     });
   },
 
+  /**
+   * REFINE «Дополнить» (HANDOFF 04 §3.1, JSON — не SSE): обновляет артефакт
+   * новым материалом без перегенерации с нуля.
+   */
+  refine(
+    workerUrl: string,
+    supplement: string,
+    artifact: { markdown: string; mode: Mode },
+    model: string,
+    config: UserConfig,
+  ) {
+    return post<ReportResponse>(workerUrl, {
+      raw_text: supplement,
+      mode: 'REFINE',
+      artifact_markdown: artifact.markdown,
+      artifact_mode: artifact.mode,
+      selected_model: model,
+      user_config: config,
+    });
+  },
+
   jiraProjects(workerUrl: string, config: UserConfig) {
     return post<ProjectsResponse>(workerUrl, {
       mode: 'JIRA_PROJECTS',

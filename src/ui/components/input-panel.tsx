@@ -276,9 +276,6 @@ export function InputPanel({
         <Button variant="default" size="sm" onClick={() => onRun(mode)} disabled={busy}>
           <RunIcon className="h-4 w-4" /> {MODE_ACTION_LABEL[mode]}
         </Button>
-        <Button variant="secondary" size="sm" onClick={() => onRun('JIRA_SYNC')} disabled={busy}>
-          <Send className="h-4 w-4" /> В Jira
-        </Button>
       </div>
     </section>
   );

@@ -9,6 +9,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { api, streamReport } from '@/lib/api';
+import { deleteArtifact, getArtifact, saveArtifact, updateArtifact } from '@/lib/artifact-store';
 import { getWorkerUrl, loadCfg, loadDraft, saveCfg, saveDraft } from '@/lib/storage';
 import { sleep } from '@/lib/utils';
 import { SAMPLE_RAW_INPUT, SAMPLE_REPORT, SAMPLE_LEARNING_DIGEST, SAMPLE_CASE_DRAFT } from '@/demo-data';
@@ -44,6 +45,9 @@ export function App() {
   const streamBufRef = useRef('');
   // Идентификатор запуска: гасит колбэки прерванного/устаревшего запроса
   const runIdRef = useRef(0);
+  // История артефактов (HANDOFF 04): id артефакта на экране + версия списка для перечитки
+  const currentArtifactIdRef = useRef<string | null>(null);
+  const [historyVersion, setHistoryVersion] = useState(0);
 
   const buildConfig = useCallback(
     (): UserConfig => ({
@@ -131,6 +135,8 @@ export function App() {
         });
         return;
       }
+      // Демо-артефакт в историю не пишем (HANDOFF 04 §2.3.5)
+      currentArtifactIdRef.current = null;
       setLastReport(sample);
       setLastMode(demoMode);
       setView({ kind: 'report', markdown: sample, demo: true, mode: demoMode });
@@ -182,6 +188,12 @@ export function App() {
       setLastReport(full);
       setLastMode(targetMode);
       setView({ kind: 'report', markdown: full, demo: false, mode: targetMode });
+      // Автосохранение артефакта в историю (HANDOFF 04 §2.3.5)
+      void saveArtifact(targetMode, full).then((saved) => {
+        if (runId !== runIdRef.current) return;
+        currentArtifactIdRef.current = saved.id;
+        setHistoryVersion((v) => v + 1);
+      });
       show(
         targetMode === 'REPORT'
           ? '✓ Отчёт готов'
@@ -283,12 +295,96 @@ export function App() {
     abortRef.current = null;
   };
 
+  const handleRefine = async () => {
+    if (busy) return;
+    const supplement = input.trim();
+    if (!supplement) {
+      alert('Вставь в левую панель новый материал (куски чатов, заметки), которым хочешь дополнить артефакт');
+      return;
+    }
+    if (!lastReport) return;
+
+    const workerUrl = getWorkerUrl();
+    if (!workerUrl || !session?.apiKey) {
+      alert('Для «Дополнить» нужен Worker API URL и API-ключ: в демо-режиме артефакт нельзя дополнить.');
+      return;
+    }
+
+    // Прерываем активный стрим, если он вдруг идёт
+    abortRef.current?.abort();
+    abortRef.current = null;
+    runIdRef.current += 1;
+    const runId = runIdRef.current;
+
+    const artifactMode = lastMode;
+    const artifactMarkdown = lastReport;
+
+    setView({ kind: 'loading', seconds: 0 });
+
+    try {
+      const config = buildConfig();
+      const modelValue = model.trim();
+      const modelParam = modelValue.toUpperCase() === 'AUTO' ? '' : modelValue;
+      const data = await api.refine(
+        workerUrl,
+        supplement,
+        { markdown: artifactMarkdown, mode: artifactMode },
+        modelParam,
+        config,
+      );
+      if (runId !== runIdRef.current) return;
+      const updated = data.report_markdown;
+      setLastReport(updated);
+      setLastMode(artifactMode);
+      setView({ kind: 'report', markdown: updated, demo: false, mode: artifactMode });
+
+      // Обновляем существующую запись истории; если её нет (или хранилище не отдало) — новая
+      if (currentArtifactIdRef.current) {
+        const saved = await updateArtifact(currentArtifactIdRef.current, updated);
+        if (saved) currentArtifactIdRef.current = saved.id;
+      }
+      if (!currentArtifactIdRef.current) {
+        const created = await saveArtifact(artifactMode, updated);
+        currentArtifactIdRef.current = created.id;
+      }
+      setHistoryVersion((v) => v + 1);
+      show('✓ Артефакт дополнен');
+    } catch (err) {
+      if (runId !== runIdRef.current) return;
+      setView({
+        kind: 'error',
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
+
+  const handleOpenArtifact = (id: string) => {
+    void (async () => {
+      const artifact = await getArtifact(id);
+      if (!artifact) {
+        show('Не удалось открыть артефакт');
+        return;
+      }
+      // REFINE по открытому артефакту обновит именно эту запись истории
+      currentArtifactIdRef.current = artifact.id;
+      setLastReport(artifact.markdown);
+      setLastMode(artifact.mode);
+      setView({ kind: 'report', markdown: artifact.markdown, demo: false, mode: artifact.mode });
+    })();
+  };
+
+  const handleDeleteArtifact = (id: string) => {
+    // Удаление из истории не трогает открытый результат на экране (§3.3)
+    void deleteArtifact(id).then(() => setHistoryVersion((v) => v + 1));
+  };
+
   const handleClear = () => {
     if (!input.trim() || !confirm('Очистить входные данные?')) return;
     runIdRef.current += 1; // гасим колбэки активного стрима
     abortRef.current?.abort();
     abortRef.current = null;
     streamBufRef.current = '';
+    currentArtifactIdRef.current = null; // историю не трогаем, только отвязываем артефакт
     setInput('');
     setLastReport('');
     setView({ kind: 'placeholder' });
@@ -425,6 +521,11 @@ export function App() {
             onDownload={handleDownload}
             onGoogleDocs={handleGoogleDocs}
             onStop={handleStop}
+            onRefine={() => void handleRefine()}
+            onOpenArtifact={handleOpenArtifact}
+            onDeleteArtifact={handleDeleteArtifact}
+            busy={busy}
+            historyVersion={historyVersion}
           />
         </Card>
       </main>

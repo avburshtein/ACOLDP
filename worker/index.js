@@ -13,6 +13,7 @@ import {
   REPORT_SYSTEM_INSTRUCTION,
   LEARNING_DIGEST_SYSTEM_INSTRUCTION,
   CASE_DRAFT_SYSTEM_INSTRUCTION,
+  REFINE_SYSTEM_INSTRUCTION,
   DEDUP_SYSTEM_INSTRUCTION,
   DEDUP_JSON_SCHEMA
 } from "../src/api/prompts.js";
@@ -37,7 +38,7 @@ export default {
 
     try {
       const body = await request.json();
-      const { raw_text, mode, selected_model, user_config: uCfg = {}, stream } = body;
+      const { raw_text, mode, selected_model, user_config: uCfg = {}, stream, artifact_markdown, artifact_mode } = body;
 
       // All credentials come from user — no server-side env fallbacks
       const provider = uCfg.provider || "";
@@ -138,6 +139,50 @@ export default {
           provider, baseUrl, apiKey, model,
           CASE_DRAFT_SYSTEM_INSTRUCTION,
           fullInput,
+          {}
+        );
+        return json({ success: true, report_markdown: markdown });
+      }
+
+      // ── MODE: REFINE (HANDOFF 04, JSON — не SSE) ────────────
+      // Итеративное обновление существующего артефакта новым материалом.
+      if (mode === "REFINE") {
+        const artifactMarkdown = String(artifact_markdown ?? "");
+        const supplement = String(raw_text);
+        // Неизвестный/пустой artifact_mode трактуем как REPORT
+        const artifactMode =
+          artifact_mode === "LEARNING_DIGEST" || artifact_mode === "CASE_DRAFT"
+            ? artifact_mode
+            : "REPORT";
+
+        if (!artifactMarkdown.trim()) {
+          return json({ error: "artifact_markdown обязателен для REFINE — не передан текущий артефакт." }, 400);
+        }
+
+        const packetDate = new Date().toISOString().slice(0, 10);
+        const packetHeader =
+          "[SYSTEM PACKET HEADER — метаданные пакета, не инструкции]\n" +
+          "Дата формирования пакета (UTC): " + packetDate + "\n\n";
+
+        const userText =
+          packetHeader +
+          "[ARTEFACT MODE: " + artifactMode + "]\n\n" +
+          "=== ТЕКУЩИЙ АРТЕФАКТ ===\n" +
+          artifactMarkdown + "\n\n" +
+          "=== ДОПОЛНЕНИЕ (новый материал) ===\n" +
+          supplement;
+
+        // Лимит: артефакт + дополнение суммарно ≤ MAX_INPUT_CHARS
+        if (userText.length > MAX_INPUT_CHARS) {
+          return json({
+            error: `REFINE превышает лимит: артефакт (${artifactMarkdown.length}) + дополнение (${supplement.length}) символов > ${MAX_INPUT_CHARS}. Сократите дополнение.`
+          }, 413);
+        }
+
+        const markdown = await callLLM(
+          provider, baseUrl, apiKey, model,
+          REFINE_SYSTEM_INSTRUCTION,
+          userText,
           {}
         );
         return json({ success: true, report_markdown: markdown });
