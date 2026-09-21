@@ -396,11 +396,33 @@
       0 1px 2px rgb(0 0 0 / 0.30),
       0 2px 6px rgb(0 0 0 / 0.25);
   }
-  /* Hover акцента в тёмной теме: заметнее ghost — CTA подсказывает, куда кликать */
-  :where(.dark, [data-theme="dark"]) .glass-shadow.glass-accent:hover {
-    background: linear-gradient(180deg, rgb(58 54 74 / 0.95), rgb(36 33 50 / 0.97));
-    border-color: rgb(255 255 255 / 0.30);
+  /* ==== Акцент в тёмной теме: матовое белое стекло (инверсия CTA) ====
+     В светлой теме CTA — тёмное дымчатое стекло (см. .glass-accent выше).
+     В тёмной — светлое: контраст с чёрным фоном такой же, как в светлой.
+     Иерархия hover сохраняется: CTA заметно ярче ghost/secondary. */
+  :where(.dark, [data-theme="dark"]) .glass-shadow.glass-accent {
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.92), rgb(235 235 242 / 0.86));
+    border-color: rgb(255 255 255 / 0.95);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.95),
+      inset 1px 2px 3px rgb(255 255 255 / 0.50),
+      inset -1px -1px 0 rgb(255 255 255 / 0.30),
+      -1px 2px 4px rgb(0 0 0 / 0.35),
+      -3px 10px 22px rgb(0 0 0 / 0.45);
+    color: rgb(15 14 18 / 0.92);
   }
-  :where(.dark, [data-theme="dark"]) .glass-shadow.glass-accent:hover svg { color: #fff; }
+  :where(.dark, [data-theme="dark"]) .glass-shadow.glass-accent svg { color: rgb(15 14 18 / 0.70); }
+  :where(.dark, [data-theme="dark"]) .glass-shadow.glass-accent:hover {
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.98), rgb(243 243 249 / 0.95));
+    border-color: #fff;
+  }
+  :where(.dark, [data-theme="dark"]) .glass-shadow.glass-accent:hover svg { color: rgb(15 14 18 / 0.85); }
+  :where(.dark, [data-theme="dark"]) .glass-shadow.glass-accent:active {
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.55),
+      inset 1px 2px 4px rgb(0 0 0 / 0.28),
+      0 1px 2px rgb(0 0 0 / 0.35),
+      0 2px 6px rgb(0 0 0 / 0.30);
+  }
 }
 
