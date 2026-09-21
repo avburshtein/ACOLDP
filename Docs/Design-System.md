@@ -76,6 +76,11 @@ hover допустим только у destructive. Иконки Lucide — мо
 - Для полей на сером фоне (внутри сгруппированных блоков, как Jira в настройках)
   переопределять фон на `bg-[var(--md-sys-color-surface)]` — utility перебьёт
   `field-surface` (utilities-слой старше components), бордер наследуется.
+- **Drop-zone** — пунктирный вариант того же паттерна: класс `.field-surface-dashed`
+  (покой — серый пунктир без заливки; hover/focus — бордер `outline-active`;
+  drag-over — бордер `outline-active` + заливка `surface-variant`). Активация
+  через `data-dragover={dragOver || undefined}`; зона доступна с клавиатуры
+  (`tabIndex` + `role="button"` + Enter/Space).
 
 ---
 

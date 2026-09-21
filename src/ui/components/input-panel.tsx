@@ -199,7 +199,7 @@ export function InputPanel({
         className="custom-scrollbar field-surface min-h-0 flex-1 resize-none rounded-md p-3.5 font-sans text-body-md leading-relaxed text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] focus-visible:outline-none"
       />
 
-      {/* Drop zone */}
+      {/* Drop zone — пунктирный вариант .field-surface (Design-System §3) */}
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -212,12 +212,17 @@ export function InputPanel({
           void handleFiles(e.dataTransfer.files);
         }}
         onClick={() => fileRef.current?.click()}
-        className={cn(
-          'flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed p-3 text-label-sm transition-colors',
-          dragOver
-            ? 'border-[var(--md-sys-color-primary)] bg-[var(--md-sys-color-surface-variant)]'
-            : 'border-[var(--md-sys-color-outline)] text-[var(--md-sys-color-on-surface-variant)] hover:border-[var(--md-sys-color-outline-variant)] hover:bg-[var(--md-sys-color-surface-variant)]',
-        )}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            fileRef.current?.click();
+          }
+        }}
+        data-dragover={dragOver || undefined}
+        tabIndex={0}
+        role="button"
+        aria-label="Загрузить файлы: перетащите или выберите"
+        className="field-surface-dashed flex cursor-pointer items-center justify-center gap-2 rounded-md p-3 text-label-sm text-[var(--md-sys-color-on-surface-variant)] focus-visible:outline-none"
       >
         <CloudUpload className="h-4 w-4" />
         <span>

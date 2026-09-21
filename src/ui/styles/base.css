@@ -160,6 +160,25 @@
     border-color: var(--md-sys-color-outline-active);
   }
 
+  /* ── Drop-zone: field-surface пунктиром ──
+     Тот же паттерн стейтов, что у .field-surface (Design-System §3):
+     покой — серый пунктир без заливки, hover/focus — бордер outline-active,
+     drag-over — бордер outline-active + заливка surface-variant.
+     Активация через data-dragover={dragOver || undefined}. */
+  .field-surface-dashed {
+    border: 1px dashed var(--md-sys-color-outline-variant);
+    background-color: transparent;
+    transition: border-color .16s ease, background-color .16s ease;
+  }
+  .field-surface-dashed:hover,
+  .field-surface-dashed:focus-visible,
+  .field-surface-dashed[data-dragover] {
+    border-color: var(--md-sys-color-outline-active);
+  }
+  .field-surface-dashed[data-dragover] {
+    background-color: var(--md-sys-color-surface-variant);
+  }
+
   .custom-scrollbar::-webkit-scrollbar { width: 4px; }
   .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
   .custom-scrollbar::-webkit-scrollbar-thumb {
