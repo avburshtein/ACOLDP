@@ -1,23 +1,50 @@
 // ============================================================
 // AI Context Orchestrator — Jira API Module
 //
-// ВАЖНО: *.atlassian.net прикрыт Cloudflare/edge-защитой Atlassian,
-// которая режет запросы без браузерного User-Agent и с датацентровых
-// IP (в т.ч. egress Cloudflare Workers). Раньше это проявлялось как
-// «Unexpected token 'C', "Cloudflare"... is not valid JSON» —
-// res.json() падал на HTML-странице блокировки. Теперь:
-//   1) все запросы идут с браузерным набором заголовков;
-//   2) тело читается через text(), ошибки — понятные, с контекстом.
+// Аутентификация: Basic email:API-токен (токен — на id.atlassian.com).
+//
+// ВАЖНО (два подводных камня Atlassian, оба уже встречались на практике):
+//   1) Edge-защита Atlassian режет запросы БЕЗ User-Agent с датацентровых IP
+//      (в т.ч. egress Cloudflare Workers) — проявлялось как HTML-страница
+//      «Cloudflare» вместо JSON. Голый fetch Workers UA не шлёт вообще.
+//   2) Браузерный User-Agent (ставили против №1) заставляет Atlassian
+//      считать запрос браузерной сессией → изменяющие запросы (POST/PUT)
+//      падают с 403 «XSRF check failed». Официальные KB:
+//      «REST API calls with a browser User-Agent header may fail CSRF checks»,
+//      «Resolve XSRF Check Failure When Calling Cloud APIs».
+//
+// Итоговое решение:
+//   • нейтральный API-клиентский User-Agent (не пустой, не браузерный);
+//   • X-Atlassian-Token: no-check — официальный обход XSRF для внешних систем;
+//   • тело читается через text(), ошибки — понятные, с контекстом (см. ниже).
 // ============================================================
 
-/** Браузерный UA — Atlassian отдаёт страницу блокировки клиентам без него */
-const BROWSER_UA =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+/** Нейтральный UA API-клиента: не пустой (иначе edge-блок) и не браузерный (иначе XSRF) */
+const CLIENT_UA = "ACOLDP-Orchestrator/1.0 (+https://github.com/avburshtein/ACOLDP)";
+
+/** base64 без InvalidCharacterError на не-Latin1 вводе (btoa так не умеет) */
+function toBase64(str) {
+  const bytes = new TextEncoder().encode(String(str));
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+
+/** Домен без схемы, пробелов и хвостовых слэшей: юзеры вставляют и «https://x/», и «x/» */
+function normalizeDomain(d) {
+  return String(d || "")
+    .trim()
+    .replace(/^https?:\/\//i, "")
+    .replace(/\/+$/, "");
+}
+
+const httpsBase = (cfg) => `https://${normalizeDomain(cfg.domain)}`;
 
 const jiraHeaders = (email, token, extra = {}) => ({
-  Authorization: `Basic ${btoa(`${email}:${token}`)}`,
+  Authorization: `Basic ${toBase64(`${String(email || "").trim()}:${String(token || "").trim()}`)}`,
   Accept: "application/json",
-  "User-Agent": BROWSER_UA,
+  "User-Agent": CLIENT_UA,
+  "X-Atlassian-Token": "no-check",
   ...extra,
 });
 
@@ -55,6 +82,7 @@ async function parseJiraResponse(res, context, domain = "") {
  * особенно с датацентровых IP) и прочие HTML-заглушки.
  */
 function describeNonJson(res, text, context, domain = "") {
+  domain = normalizeDomain(domain);
   const t = String(text || "");
   const plain = t
     .replace(/<[^>]*>/g, " ")
@@ -86,6 +114,17 @@ function describeNonJson(res, text, context, domain = "") {
       `Jira (${context}): запрос заблокирован защитой Cloudflare/Atlassian (HTTP ${res.status}). ` +
       `Egress-IP Cloudflare Workers часто попадает под ограничения. ` +
       `Повтори позже либо используй прокси вне Cloudflare.` +
+      (plain ? ` Ответ: «${plain}»` : "")
+    );
+  }
+
+  // XSRF-защита: Atlassian счёл запрос браузерной сессией без CSRF-токена.
+  // Из API-клиента с X-Atlassian-Token: no-check возникать не должно;
+  // если возникло — чаще всего заголовки снял промежуточный прокси на пути.
+  if (hay.includes("xsrf")) {
+    return (
+      `Jira (${context}): ${res.status}, Atlassian отклонил запрос XSRF-защитой. ` +
+      `Проверь Jira Domain — должно быть yoursite.atlassian.net, без https:// и слэша.` +
       (plain ? ` Ответ: «${plain}»` : "")
     );
   }
@@ -167,7 +206,7 @@ function briefError(text, status) {
 export async function fetchProjects(cfg) {
   if (!cfg.domain || !cfg.token) return [];
 
-  const url = `https://${cfg.domain}/rest/api/2/project`;
+  const url = `${httpsBase(cfg)}/rest/api/2/project`;
   const res = await jiraFetch(url, { headers: jiraHeaders(cfg.email, cfg.token) });
   const data = await parseJiraResponse(res, "список проектов", cfg.domain);
   return (Array.isArray(data) ? data : [])
@@ -190,7 +229,7 @@ export async function fetchOpenTickets(cfg) {
   if (!cfg.domain || !cfg.token || !cfg.project) return [];
 
   const jql = `project = "${cfg.project}" AND statusCategory != Done ORDER BY updated DESC`;
-  const url = `https://${cfg.domain}/rest/api/3/search/jql`;
+  const url = `${httpsBase(cfg)}/rest/api/3/search/jql`;
 
   const issues = [];
   let nextPageToken;
@@ -228,7 +267,7 @@ export async function processAction(act, cfg) {
   const headers = jiraHeaders(cfg.email, cfg.token, {
     "Content-Type": "application/json"
   });
-  const base = `https://${cfg.domain}/rest/api/2`;
+  const base = `${httpsBase(cfg)}/rest/api/2`;
 
   if (act.action_type === "CREATE") {
     return createTicket(act, cfg, base, headers);
@@ -286,7 +325,7 @@ async function createTicket(act, cfg, base, headers) {
       status: "created",
       summary: act.summary,
       jira_key: created.key,
-      jira_url: `https://${cfg.domain}/browse/${created.key}`,
+      jira_url: `${httpsBase(cfg)}/browse/${created.key}`,
       priority: act.priority || "Medium",
       issue_type: act.issue_type || "Task"
     };
@@ -308,7 +347,7 @@ async function updatePriority(act, cfg, base, headers) {
       jira_key: act.matched_jira_key,
       new_priority: act.new_priority,
       old_priority: act.old_priority || "—",
-      jira_url: `https://${cfg.domain}/browse/${act.matched_jira_key}`
+      jira_url: `${httpsBase(cfg)}/browse/${act.matched_jira_key}`
     };
   }
 
@@ -327,7 +366,7 @@ async function addComment(act, cfg, base, headers) {
       status: "commented",
       jira_key: act.matched_jira_key,
       comment_summary: act.comment_text,
-      jira_url: `https://${cfg.domain}/browse/${act.matched_jira_key}`
+      jira_url: `${httpsBase(cfg)}/browse/${act.matched_jira_key}`
     };
   }
 
