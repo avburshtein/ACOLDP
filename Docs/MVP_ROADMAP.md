@@ -28,7 +28,7 @@
 | — | HANDOFF 02 — полировка UI + дайджест под чаты LLM | ACOLDP | ✅ принят | UX результатов, демо |
 | **1** | **HANDOFF 03 — стриминг + стабильность** | ACOLDP | ✅ принят (живой тест: 100k символов, 3 режима без ошибок) | 524, Stop, диагностика 500 (GLM) |
 | 1b | Хотфикс: Jira 403 «XSRF check failed» — нейтральный API-UA вместо браузерного + `X-Atlassian-Token: no-check` (по KB Atlassian) + нормализация домена/кредов | ACOLDP | 🔧 код готов, ждёт деплой worker | «В тикеты» (POST-запросы к Atlassian) |
-| **2** | **HANDOFF 04 — история артефактов + REFINE** | ACOLDP | ⬜ | «потерял результат», итеративное дополнение |
+| **2** | **HANDOFF 04 — история артефактов + REFINE** | ACOLDP | 📄 `HANDOFF_04_HISTORY_AND_REFINE.md` | «потерял результат», итеративное дополнение |
 | **3** | **HANDOFF 05 — экспорт кейса в JSON (схема UX42)** | ACOLDP | ⬜ | ручной перенос полей |
 | **4** | **HANDOFF 06 — импорт JSON в Case Study Builder** | ux42studio | ⬜ | мост → UX42 (платная фича) |
 | 5 | Экспорт-полировка (Obsidian frontmatter, Notion) | ACOLDP | ⬜ опц. | удобство хранения |

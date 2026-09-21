@@ -35,7 +35,9 @@ GitHub Repo
 Токены Material Design 3 (`--md-sys-color-*`) маппятся на ч/б значения в `src/ui/styles/theme.css`.
 Переключение — атрибут `data-theme="dark|light"` на `<html>`, выбор сохраняется в localStorage.
 
-**Полные правила** — в [`Docs/Design-System.md`](Docs/Design-System.md). Коротко:
+**Полные правила** — в [`Docs/Design-System.md`](Docs/Design-System.md) (поверхности:
+стекло, поля, темы) и [`Docs/UI-Rules.md`](Docs/UI-Rules.md) (реализация: сетка,
+типографика, состояния, доступность, чеклист ревью). Коротко:
 
 - **Кнопки — стекло** (`glass`-система в `base.css`): CTA (`default`), нейтральные
   (`secondary`), служебные (`ghost`), destructive — единственная кнопка с особым
