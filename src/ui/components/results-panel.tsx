@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import type { JiraResult, Mode, SyncStats } from '@/types';
 import { MODE_LABELS } from '@/types';
 import { cn } from '@/lib/utils';
+import { parseCaseCompleteness } from '@/lib/parse-case-completeness';
 
 export type ResultsView =
   | { kind: 'placeholder' }
@@ -32,6 +33,14 @@ function formatTime(totalSec: number): string {
   return mm > 0 ? `${mm}:${ss}` : `${totalSec}с`;
 }
 
+/** Заголовок карточки результата зависит от режима генерации */
+function resultTitle(mode: Mode): string {
+  if (mode === 'REPORT') return '📋 Отчёт';
+  if (mode === 'LEARNING_DIGEST') return '📚 Дайджест';
+  if (mode === 'CASE_DRAFT') return '🎨 Кейс UX42';
+  return MODE_LABELS[mode] ?? mode;
+}
+
 const cardCls =
   'rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] p-4';
 
@@ -56,14 +65,16 @@ export function ResultsPanel({
             <span className="text-label-sm text-[var(--md-sys-color-on-surface-variant)] mr-1">
               {MODE_LABELS[view.mode]}
             </span>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={onConvert}
-              title="Отправить результат в Jira как входные данные"
-            >
-              <FileText className="h-3.5 w-3.5 mr-1" /> В тикеты
-            </Button>
+            {view.mode === 'REPORT' && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={onConvert}
+                title="Отправить результат в Jira как входные данные"
+              >
+                <FileText className="h-3.5 w-3.5 mr-1" /> В тикеты
+              </Button>
+            )}
             <Button variant="ghost" size="icon" onClick={onGoogleDocs} title="Открыть в Google Docs">
               <ExternalLink className="h-4 w-4" />
             </Button>
@@ -113,9 +124,12 @@ export function ResultsPanel({
         {view.kind === 'report' && (
           <div className="space-y-3">
             <DemoBanner demo={view.demo} />
+            {view.mode === 'CASE_DRAFT' && (
+              <CompletenessBanner markdown={view.markdown} />
+            )}
             <div className={cardCls}>
               <p className="mb-2 text-label-md font-semibold tracking-wide">
-                📋 DAILY REPORT
+                {resultTitle(view.mode)}
               </p>
               <pre className="custom-scrollbar max-h-[60vh] overflow-y-auto whitespace-pre-wrap break-words font-mono text-body-sm leading-relaxed text-[var(--md-sys-color-on-surface)]">
                 {view.markdown}
@@ -140,6 +154,23 @@ export function ResultsPanel({
         )}
       </div>
     </section>
+  );
+}
+
+function CompletenessBanner({ markdown }: { markdown: string }) {
+  const info = parseCaseCompleteness(markdown);
+  if (!info) return null;
+  return (
+    <div className={cn(cardCls, 'border-dashed')}>
+      <p className="text-label-md font-semibold">
+        Заполнено {info.filled}/{info.total} текстовых полей
+      </p>
+      {info.needsDesigner && (
+        <p className="mt-1 text-body-sm text-[var(--md-sys-color-on-surface-variant)]">
+          Ещё нужно: {info.needsDesigner}
+        </p>
+      )}
+    </div>
   );
 }
 
