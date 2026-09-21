@@ -1,4 +1,5 @@
-import { Copy, Download, ExternalLink, FileText, Sparkles } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { Copy, Download, ExternalLink, FileText, Sparkles, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { JiraResult, Mode, SyncStats } from '@/types';
 import { MODE_LABELS } from '@/types';
@@ -8,6 +9,7 @@ import { parseCaseCompleteness } from '@/lib/parse-case-completeness';
 export type ResultsView =
   | { kind: 'placeholder' }
   | { kind: 'loading'; seconds: number }
+  | { kind: 'streaming'; markdown: string; mode: Mode; seconds: number }
   | { kind: 'report'; markdown: string; demo: boolean; mode: Mode }
   | { kind: 'sync'; stats?: SyncStats; results: JiraResult[]; demo: boolean }
   | { kind: 'error'; message: string };
@@ -18,6 +20,7 @@ interface ResultsPanelProps {
   onCopy: () => void;
   onDownload: () => void;
   onGoogleDocs: () => void;
+  onStop: () => void;
 }
 
 function loadingHint(s: number): string {
@@ -53,6 +56,7 @@ export function ResultsPanel({
   onCopy,
   onDownload,
   onGoogleDocs,
+  onStop,
 }: ResultsPanelProps) {
   return (
     <section className="flex h-full flex-col gap-3 p-4">
@@ -83,6 +87,27 @@ export function ResultsPanel({
             </Button>
             <Button variant="ghost" size="icon" onClick={onDownload} title="Скачать .md">
               <Download className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+        {view.kind === 'streaming' && (
+          <div className="flex items-center gap-1.5">
+            <span className="text-label-sm text-[var(--md-sys-color-on-surface-variant)] mr-1">
+              {MODE_LABELS[view.mode]}
+            </span>
+            <span className="text-label-sm text-[var(--md-sys-color-on-surface-variant)]">
+              Генерация…
+            </span>
+            <span className="w-10 text-right font-mono text-label-sm text-[var(--md-sys-color-on-surface)]">
+              {formatTime(view.seconds)}
+            </span>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={onStop}
+              title="Остановить и сохранить часть"
+            >
+              <Square className="h-3.5 w-3.5 mr-1" /> Stop
             </Button>
           </div>
         )}
@@ -138,6 +163,20 @@ export function ResultsPanel({
           </div>
         )}
 
+        {view.kind === 'streaming' && (
+          <div className="space-y-3">
+            {view.mode === 'CASE_DRAFT' && (
+              <CompletenessBanner markdown={view.markdown} />
+            )}
+            <div className={cardCls}>
+              <p className="mb-2 text-label-md font-semibold tracking-wide">
+                {resultTitle(view.mode)}
+              </p>
+              <StreamingPre markdown={view.markdown} />
+            </div>
+          </div>
+        )}
+
         {view.kind === 'sync' && (
           <div className="space-y-3">
             <DemoBanner demo={view.demo} />
@@ -154,6 +193,25 @@ export function ResultsPanel({
         )}
       </div>
     </section>
+  );
+}
+
+/** Live-рендер стрима: тот же pre, но с автопрокруткой вниз по мере генерации (MVP) */
+function StreamingPre({ markdown }: { markdown: string }) {
+  const ref = useRef<HTMLPreElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [markdown]);
+
+  return (
+    <pre
+      ref={ref}
+      className="custom-scrollbar max-h-[60vh] overflow-y-auto whitespace-pre-wrap break-words font-mono text-body-sm leading-relaxed text-[var(--md-sys-color-on-surface)]"
+    >
+      {markdown || '…'}
+    </pre>
   );
 }
 

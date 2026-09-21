@@ -68,7 +68,7 @@ export const MODE_MODEL_HINTS: Record<Mode, string> = {
   JIRA_SYNC: 'Достаточно быстрой модели — структурная задача (dedup + JSON).',
 };
 
-/** Вход больше этого объёма — риск таймаута 524 (лимит Worker ~30 сек) */
+/** Большой вход: генерация идёт дольше, но со стримингом ответ приходит постепенно (риск 524 снят). */
 export const TIMEOUT_WARN_CHARS = 30000;
 
 export interface JiraResult {

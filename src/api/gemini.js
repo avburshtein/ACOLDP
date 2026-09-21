@@ -198,11 +198,214 @@ async function callOpenAICompatible(provider, baseUrl, apiKey, model, systemProm
 
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error(`[${provider.toUpperCase()}] API Error (${res.status}): ${errText}`);
+    // Диагностика: provider/model + HTTP статус + первые 400 символов тела
+    throw new Error(`[${provider}/${finalModel}] HTTP ${res.status}: ${errText.slice(0, 400)}`);
   }
 
   const data = await res.json();
   return data.choices?.[0]?.message?.content || "";
+}
+
+// ── Streaming (SSE) ──────────────────────────────────────────
+// Тот же контракт ошибок, что и у callLLM: [<provider>/<model>] HTTP <status>: <body ≤400>.
+// Схема (schema) в стриминге не используется — только свободный текст.
+
+const SSE_DONE = "[DONE]";
+
+/**
+ * Построчный SSE-парсер: буферизует частичные строки (чанк может рваться
+ * посреди JSON), нормализует CRLF, отдаёт payload каждой строки `data:`.
+ * События без `data:` и пустые строки пропускаются.
+ */
+async function streamSSE(res, onPayload) {
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, "\n");
+      let nl;
+      while ((nl = buffer.indexOf("\n")) !== -1) {
+        const line = buffer.slice(0, nl);
+        buffer = buffer.slice(nl + 1);
+        if (!line.startsWith("data:")) continue;
+        const payload = line.slice(5).trim();
+        if (!payload || payload === SSE_DONE) continue;
+        onPayload(payload);
+      }
+    }
+    // Флаш последней строки, если поток закрылся без завершающего \n
+    if (buffer.startsWith("data:")) {
+      const payload = buffer.slice(5).trim();
+      if (payload && payload !== SSE_DONE) onPayload(payload);
+    }
+  } finally {
+    try { reader.releaseLock(); } catch { /* noop */ }
+  }
+}
+
+/** Текстовый чанк ответа Gemini: конкатенация ВСЕХ parts[].text. */
+function geminiChunkText(chunk) {
+  const parts = chunk && chunk.candidates && chunk.candidates[0] &&
+    chunk.candidates[0].content && chunk.candidates[0].content.parts;
+  if (!Array.isArray(parts)) return "";
+  return parts.map((p) => (p && typeof p.text === "string" ? p.text : "")).join("");
+}
+
+/**
+ * Стриминговый вызов LLM: дельты текста отдаются в onDelta сразу по мере генерации.
+ * @param {string} provider - 'google' | 'alibaba' | 'openai' | 'custom'
+ * @param {(text: string) => void} onDelta - колбэк на каждый текстовый чанк
+ * @param {AbortSignal} signal - отмена (Stop)
+ * @returns {Promise<string>} имя фактически использованной модели
+ */
+export async function callLLMStream(provider, baseUrl, apiKey, model, systemPrompt, userText, { onDelta, signal } = {}) {
+  const emit = typeof onDelta === "function" ? onDelta : () => {};
+  if (provider === "google") {
+    return callGoogleStream(apiKey, model, systemPrompt, userText, emit, signal);
+  }
+  return callOpenAICompatibleStream(provider, baseUrl, apiKey, model, systemPrompt, userText, emit, signal);
+}
+
+async function callGoogleStream(apiKey, model, systemPrompt, userText, onDelta, signal) {
+  // Явная модель → одна попытка, без fallback
+  if (model && model !== "AUTO") {
+    return callGeminiStream(apiKey, model, systemPrompt, userText, onDelta, signal);
+  }
+
+  // AUTO: discovery + перебор моделей, но только ДО первой дельты
+  const availableModels = await fetchAvailableGeminiModels(apiKey);
+  if (availableModels.length === 0) {
+    throw new Error("Gemini: не найдено ни одной доступной модели. Проверьте ключ: https://aistudio.google.com/apikey");
+  }
+  const flashModels = availableModels.filter((m) => m.includes("flash"));
+  const candidates = flashModels.length > 0 ? flashModels : availableModels;
+
+  let lastError = "";
+  for (const m of candidates) {
+    let emitted = false;
+    const track = (t) => { emitted = true; onDelta(t); };
+    try {
+      return await callGeminiStream(apiKey, m, systemPrompt, userText, track, signal);
+    } catch (e) {
+      if ((e && e.name === "AbortError") || (signal && signal.aborted)) throw e;
+      lastError = (e && e.message) || String(e);
+      if (emitted) throw e; // после первой дельты fallback запрещён
+      if (!lastError.includes("503") && !lastError.includes("429")) throw e;
+    }
+  }
+  throw new Error(`Gemini: все модели недоступны (${lastError})`);
+}
+
+async function callGeminiStream(apiKey, modelName, systemPrompt, userText, onDelta, signal) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?alt=sse&key=${apiKey}`;
+
+  const genConfig = {};
+  // Skip thinkingConfig for older/lightweight models — they don't support it
+  if (!modelName.includes("lite") && !modelName.includes("1.5") && !modelName.includes("1.0")) {
+    genConfig.thinkingConfig = { thinkingBudget: 0 };
+  }
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      system_instruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ parts: [{ text: userText }] }],
+      generationConfig: genConfig
+    }),
+    signal
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`[google/${modelName}] HTTP ${res.status}: ${errText.slice(0, 400)}`);
+  }
+
+  let blocked = "";
+  // Gemini при alt=sse не присылает [DONE]: конец потока = завершение чтения
+  await streamSSE(res, (payload) => {
+    let chunk;
+    try { chunk = JSON.parse(payload); } catch { return; } // устойчивость к глюкам провайдера
+    const text = geminiChunkText(chunk);
+    if (text) { onDelta(text); return; }
+    const candidate = chunk && chunk.candidates && chunk.candidates[0];
+    const reason = (chunk && chunk.promptFeedback && chunk.promptFeedback.blockReason) ||
+      (candidate && candidate.finishReason === "SAFETY" ? "SAFETY" : "");
+    if (reason) blocked = reason;
+  });
+
+  if (blocked) throw new Error(`[google/${modelName}] ответ заблокирован: ${blocked}`);
+  return modelName;
+}
+
+async function callOpenAICompatibleStream(provider, baseUrl, apiKey, model, systemPrompt, userText, onDelta, signal) {
+  const BASE_URLS = {
+    alibaba: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+    openai: "https://api.openai.com/v1",
+    custom: baseUrl
+  };
+
+  const finalBaseUrl = BASE_URLS[provider] || baseUrl;
+  if (!finalBaseUrl) throw new Error("Base URL не указан в настройках для Custom провайдера");
+
+  const DEFAULT_MODELS = { alibaba: "qwen-max", openai: "gpt-4o-mini", custom: "gpt-4o-mini" };
+  const finalModel = (model && model !== "AUTO") ? model : (DEFAULT_MODELS[provider] || "gpt-4o-mini");
+  const url = `${finalBaseUrl.replace(/\/$/, "")}/chat/completions`;
+
+  const payload = {
+    model: finalModel,
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userText }
+    ],
+    stream: true
+  };
+
+  let emitted = false;
+  const attempt = async () => {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(payload),
+      signal
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      // Диагностика (кейс GLM 500): provider/model + статус + тело ответа API
+      throw new Error(`[${provider}/${finalModel}] HTTP ${res.status}: ${errText.slice(0, 400)}`);
+    }
+
+    await streamSSE(res, (raw) => {
+      let chunk;
+      try { chunk = JSON.parse(raw); } catch { return; }
+      const delta = chunk && chunk.choices && chunk.choices[0] &&
+        chunk.choices[0].delta && chunk.choices[0].delta.content;
+      if (typeof delta === "string" && delta) { emitted = true; onDelta(delta); }
+    });
+  };
+
+  try {
+    await attempt();
+  } catch (e) {
+    if ((e && e.name === "AbortError") || (signal && signal.aborted)) throw e;
+    // Один ретрай при HTTP 5xx/429 — только до первой дельты
+    const status = (String(e && e.message).match(/HTTP (\d{3})/) || [])[1];
+    const retriable = !!status && (status.startsWith("5") || status === "429");
+    if (!emitted && retriable) {
+      await sleep(800);
+      await attempt();
+    } else {
+      throw e;
+    }
+  }
+  return finalModel;
 }
 
 // ── Helpers ─────────────────────────────────────────────────

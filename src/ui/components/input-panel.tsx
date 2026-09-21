@@ -256,8 +256,8 @@ export function InputPanel({
       </div>
       {value.length > TIMEOUT_WARN_CHARS && !overLimit && (
         <p className="px-1 text-xs text-amber-600 dark:text-amber-400">
-          ⚠ Больше {TIMEOUT_WARN_CHARS.toLocaleString('ru-RU')} символов — на медленной модели
-          возможен таймаут 524. Возьмите flash/mini или разбейте текст.
+          ⚠ Большой вход ({TIMEOUT_WARN_CHARS.toLocaleString('ru-RU')} симв.) — генерация займёт
+          больше времени, но ответ появится постепенно по мере готовности.
         </p>
       )}
 

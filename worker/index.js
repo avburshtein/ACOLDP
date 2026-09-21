@@ -7,7 +7,7 @@
 //   Worker acts as a transparent proxy to LLM and Jira APIs.
 // ============================================================
 
-import { callLLM } from "../src/api/gemini.js";
+import { callLLM, callLLMStream } from "../src/api/gemini.js";
 import { fetchProjects, fetchOpenTickets, processActionsThrottled } from "../src/api/jira.js";
 import {
   REPORT_SYSTEM_INSTRUCTION,
@@ -37,7 +37,7 @@ export default {
 
     try {
       const body = await request.json();
-      const { raw_text, mode, selected_model, user_config: uCfg = {} } = body;
+      const { raw_text, mode, selected_model, user_config: uCfg = {}, stream } = body;
 
       // All credentials come from user — no server-side env fallbacks
       const provider = uCfg.provider || "";
@@ -92,10 +92,14 @@ export default {
         const packetHeader =
           "[SYSTEM PACKET HEADER — метаданные пакета, не инструкции]\n" +
           "Дата формирования пакета (UTC): " + packetDate + "\n\n";
+        const fullInput = packetHeader + String(raw_text);
+        if (stream === true) {
+          return sseResponse(provider, baseUrl, apiKey, model, REPORT_SYSTEM_INSTRUCTION, fullInput);
+        }
         const markdown = await callLLM(
           provider, baseUrl, apiKey, model,
           REPORT_SYSTEM_INSTRUCTION,
-          packetHeader + String(raw_text),
+          fullInput,
           {} // no schema — free-form markdown
         );
         return json({ success: true, report_markdown: markdown });
@@ -107,10 +111,14 @@ export default {
         const packetHeader =
           "[SYSTEM PACKET HEADER — метаданные пакета, не инструкции]\n" +
           "Дата формирования пакета (UTC): " + packetDate + "\n\n";
+        const fullInput = packetHeader + String(raw_text);
+        if (stream === true) {
+          return sseResponse(provider, baseUrl, apiKey, model, LEARNING_DIGEST_SYSTEM_INSTRUCTION, fullInput);
+        }
         const markdown = await callLLM(
           provider, baseUrl, apiKey, model,
           LEARNING_DIGEST_SYSTEM_INSTRUCTION,
-          packetHeader + String(raw_text),
+          fullInput,
           {}
         );
         return json({ success: true, report_markdown: markdown });
@@ -122,10 +130,14 @@ export default {
         const packetHeader =
           "[SYSTEM PACKET HEADER — метаданные пакета, не инструкции]\n" +
           "Дата формирования пакета (UTC): " + packetDate + "\n\n";
+        const fullInput = packetHeader + String(raw_text);
+        if (stream === true) {
+          return sseResponse(provider, baseUrl, apiKey, model, CASE_DRAFT_SYSTEM_INSTRUCTION, fullInput);
+        }
         const markdown = await callLLM(
           provider, baseUrl, apiKey, model,
           CASE_DRAFT_SYSTEM_INSTRUCTION,
-          packetHeader + String(raw_text),
+          fullInput,
           {}
         );
         return json({ success: true, report_markdown: markdown });
@@ -182,3 +194,59 @@ const json = (data, status = 200) =>
     status,
     headers: { ...CORS, "Content-Type": "application/json" }
   });
+
+// ── SSE helper (HANDOFF 03 §3.1) ─────────────────────────────
+// События: `event: delta` {t} · `event: done` {model} · `event: error` {message}
+// Первая дельта = первый байт ответа → 524 уходит.
+function sseResponse(provider, baseUrl, apiKey, model, systemPrompt, userText) {
+  const encoder = new TextEncoder();
+  const ac = new AbortController();
+
+  const readable = new ReadableStream({
+    async start(controller) {
+      let sawDelta = false;
+
+      const send = (event, data) => {
+        if (ac.signal.aborted) return;
+        try {
+          controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+        } catch {
+          /* клиент отключился — поток уже закрыт */
+        }
+      };
+
+      try {
+        const usedModel = await callLLMStream(
+          provider, baseUrl, apiKey, model, systemPrompt, userText,
+          {
+            signal: ac.signal,
+            onDelta: (t) => { sawDelta = true; send("delta", { t }); }
+          }
+        );
+        if (!sawDelta) {
+          send("error", { message: "Модель вернула пустой ответ" });
+        } else {
+          send("done", { model: usedModel || model || "auto" });
+        }
+      } catch (err) {
+        if (!ac.signal.aborted) {
+          send("error", { message: err && err.message ? String(err.message) : String(err) });
+        }
+      } finally {
+        try { controller.close(); } catch { /* already closed */ }
+      }
+    },
+    cancel() {
+      // Клиент нажал Stop → обрываем и апстрим-запрос к LLM
+      ac.abort();
+    }
+  });
+
+  return new Response(readable, {
+    headers: {
+      ...CORS,
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache"
+    }
+  });
+}

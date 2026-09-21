@@ -8,7 +8,7 @@ import { StatusBadge, useStatus } from '@/components/status-badge';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { api } from '@/lib/api';
+import { api, streamReport } from '@/lib/api';
 import { getWorkerUrl, loadCfg, loadDraft, saveCfg, saveDraft } from '@/lib/storage';
 import { sleep } from '@/lib/utils';
 import { SAMPLE_RAW_INPUT, SAMPLE_REPORT, SAMPLE_LEARNING_DIGEST, SAMPLE_CASE_DRAFT } from '@/demo-data';
@@ -38,7 +38,12 @@ export function App() {
   const [lastMode, setLastMode] = useState<Mode>('REPORT');
   const [view, setView] = useState<ResultsView>({ kind: 'placeholder' });
   const { message, visible, show } = useStatus();
-  const busy = view.kind === 'loading';
+  const busy = view.kind === 'loading' || view.kind === 'streaming';
+  // Стриминг: отмена (Stop) + накопленный частичный текст (сохраняем после Stop)
+  const abortRef = useRef<AbortController | null>(null);
+  const streamBufRef = useRef('');
+  // Идентификатор запуска: гасит колбэки прерванного/устаревшего запроса
+  const runIdRef = useRef(0);
 
   const buildConfig = useCallback(
     (): UserConfig => ({
@@ -67,12 +72,14 @@ export function App() {
     return () => window.clearTimeout(id);
   }, [input, show]);
 
-  // Секундомер загрузки
+  // Секундомер загрузки и стриминга
   useEffect(() => {
-    if (view.kind !== 'loading') return;
+    if (view.kind !== 'loading' && view.kind !== 'streaming') return;
     const id = window.setInterval(() => {
       setView((v) =>
-        v.kind === 'loading' ? { ...v, seconds: v.seconds + 1 } : v,
+        v.kind === 'loading' || v.kind === 'streaming'
+          ? { ...v, seconds: v.seconds + 1 }
+          : v,
       );
     }, 1000);
     return () => window.clearInterval(id);
@@ -94,12 +101,20 @@ export function App() {
       });
       return;
     }
+    // Прерываем предыдущий запрос (повторный запуск) и гасим его колбэки
+    abortRef.current?.abort();
+    abortRef.current = null;
+    runIdRef.current += 1;
+    const runId = runIdRef.current;
+    streamBufRef.current = '';
+
     setView({ kind: 'loading', seconds: 0 });
 
     const workerUrl = getWorkerUrl();
     // Гость (нет ключа) или нет воркера — работаем на демо-данных
     if (!workerUrl || !session?.apiKey) {
       await sleep(900);
+      if (runId !== runIdRef.current) return;
       let sample = SAMPLE_REPORT;
       let demoMode: Mode = 'REPORT';
       if (targetMode === 'LEARNING_DIGEST') {
@@ -122,31 +137,15 @@ export function App() {
       return;
     }
 
-    try {
-      const config = buildConfig();
-      const modelValue = model.trim();
-      const modelParam = modelValue.toUpperCase() === 'AUTO' ? '' : modelValue;
+    const config = buildConfig();
+    const modelValue = model.trim();
+    const modelParam = modelValue.toUpperCase() === 'AUTO' ? '' : modelValue;
 
-      if (targetMode === 'REPORT') {
-        const data = await api.report(workerUrl, text, modelParam, config);
-        setLastReport(data.report_markdown);
-        setLastMode('REPORT');
-        setView({ kind: 'report', markdown: data.report_markdown, demo: false, mode: 'REPORT' });
-        show('✓ Отчёт готов');
-      } else if (targetMode === 'LEARNING_DIGEST') {
-        const data = await api.learningDigest(workerUrl, text, modelParam, config);
-        setLastReport(data.report_markdown);
-        setLastMode('LEARNING_DIGEST');
-        setView({ kind: 'report', markdown: data.report_markdown, demo: false, mode: 'LEARNING_DIGEST' });
-        show('✓ Дайджест готов');
-      } else if (targetMode === 'CASE_DRAFT') {
-        const data = await api.caseDraft(workerUrl, text, modelParam, config);
-        setLastReport(data.report_markdown);
-        setLastMode('CASE_DRAFT');
-        setView({ kind: 'report', markdown: data.report_markdown, demo: false, mode: 'CASE_DRAFT' });
-        show('✓ Кейс готов');
-      } else if (targetMode === 'JIRA_SYNC') {
+    // ── JIRA_SYNC: без изменений, обычный JSON ──
+    if (targetMode === 'JIRA_SYNC') {
+      try {
         const data = await api.jiraSync(workerUrl, text, modelParam, config);
+        if (runId !== runIdRef.current) return;
         setView({
           kind: 'sync',
           stats: data.stats,
@@ -154,8 +153,59 @@ export function App() {
           demo: false,
         });
         show('✓ Синхронизация завершена');
+      } catch (err) {
+        if (runId !== runIdRef.current) return;
+        setView({
+          kind: 'error',
+          message: err instanceof Error ? err.message : String(err),
+        });
       }
+      return;
+    }
+
+    // ── Генеративные режимы: SSE-стриминг + Stop ──
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setView({ kind: 'streaming', markdown: '', mode: targetMode, seconds: 0 });
+
+    try {
+      const full = await streamReport(workerUrl, text, targetMode, modelParam, config, {
+        signal: controller.signal,
+        onDelta: (_delta, fullText) => {
+          if (runId !== runIdRef.current) return;
+          streamBufRef.current = fullText;
+          setView((v) => (v.kind === 'streaming' ? { ...v, markdown: fullText } : v));
+        },
+      });
+      if (runId !== runIdRef.current) return;
+      abortRef.current = null;
+      setLastReport(full);
+      setLastMode(targetMode);
+      setView({ kind: 'report', markdown: full, demo: false, mode: targetMode });
+      show(
+        targetMode === 'REPORT'
+          ? '✓ Отчёт готов'
+          : targetMode === 'LEARNING_DIGEST'
+            ? '✓ Дайджест готов'
+            : '✓ Кейс готов',
+      );
     } catch (err) {
+      if (runId !== runIdRef.current) return;
+      abortRef.current = null;
+      // Stop: сохраняем частичный результат, если он успел накопиться
+      if (err instanceof Error && err.name === 'AbortError') {
+        const partial = streamBufRef.current;
+        if (partial.trim()) {
+          setLastReport(partial);
+          setLastMode(targetMode);
+          setView({ kind: 'report', markdown: partial, demo: false, mode: targetMode });
+          show('⏹ Остановлено — частичный результат сохранён');
+        } else {
+          setView({ kind: 'placeholder' });
+          show('⏹ Остановлено');
+        }
+        return;
+      }
       setView({
         kind: 'error',
         message: err instanceof Error ? err.message : String(err),
@@ -227,8 +277,18 @@ export function App() {
     show('✓ Демо-пример загружен');
   };
 
+  const handleStop = () => {
+    // Останавливает активную стрим-генерацию; частичный текст сохранит catch в sendRequest
+    abortRef.current?.abort();
+    abortRef.current = null;
+  };
+
   const handleClear = () => {
     if (!input.trim() || !confirm('Очистить входные данные?')) return;
+    runIdRef.current += 1; // гасим колбэки активного стрима
+    abortRef.current?.abort();
+    abortRef.current = null;
+    streamBufRef.current = '';
     setInput('');
     setLastReport('');
     setView({ kind: 'placeholder' });
@@ -364,6 +424,7 @@ export function App() {
             onCopy={handleCopy}
             onDownload={handleDownload}
             onGoogleDocs={handleGoogleDocs}
+            onStop={handleStop}
           />
         </Card>
       </main>
