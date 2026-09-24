@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { BookOpen, ChevronDown, CloudUpload, Cpu, FileText, Palette, Play, Send, Trash2 } from 'lucide-react';
+import { BookOpen, ChevronDown, CloudUpload, FileText, Palette, Play, Send, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -184,12 +184,9 @@ export function InputPanel({
       <p className="text-label-sm leading-snug text-[var(--md-sys-color-on-surface-variant)]">
         {MODE_DESCRIPTIONS[mode]}
       </p>
-      <p className="flex items-start gap-1.5 text-label-sm leading-snug text-[var(--md-sys-color-on-surface-variant)]">
-        <Cpu className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-        <span>
-          <span className="text-[var(--md-sys-color-on-surface)]">Модель:</span>{' '}
-          {MODE_MODEL_HINTS[mode]}
-        </span>
+      <p className="text-label-sm leading-snug text-[var(--md-sys-color-on-surface-variant)]">
+        <span className="text-[var(--md-sys-color-on-surface)]">Рекомендации по LLM:</span>{' '}
+        {MODE_MODEL_HINTS[mode]}
       </p>
 
       <textarea

@@ -11,8 +11,9 @@ Tailwind v4 + MD3-токены, ч/б темы light/dark).
    (реализация). Оба обязательны.
 2. Генерация/стриминг/Worker → `Docs/HANDOFF_03_STREAMING_AND_STABILITY.md` (SSE-контракт §3).
 3. История/REFINE → `Docs/HANDOFF_04_HISTORY_AND_REFINE.md`.
-4. План работ и границы скоупа → `Docs/MVP_ROADMAP.md`.
-5. Спецификация/видение (не MVP!) → `Docs/AI Context Orchestrator & Living Documentation Specification.md`.
+4. Промпты/эмодзи/атрибуция → `Docs/HANDOFF_04B_PROMPT_HYGIENE_AND_ATTRIBUTION.md`.
+5. План работ и границы скоупа → `Docs/MVP_ROADMAP.md`.
+6. Спецификация/видение (не MVP!) → `Docs/AI Context Orchestrator & Living Documentation Specification.md`.
 
 ## Жёсткие правила UI
 
