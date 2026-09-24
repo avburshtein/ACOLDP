@@ -84,7 +84,7 @@ function artifactPreview(markdown: string): string {
 }
 
 const cardCls =
-  'rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] p-4';
+  'rounded-md border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] p-4';
 
 const linkCls =
   'shrink-0 text-label-md underline underline-offset-4 text-[var(--md-sys-color-primary)] hover:opacity-80';
@@ -131,11 +131,11 @@ export function ResultsPanel({
           <h2 className="text-title-sm font-semibold text-[var(--md-sys-color-on-surface)]">
             2. Результаты
           </h2>
-          <TabsList className="h-8">
-            <TabsTrigger value="result" className="h-6 px-2.5">
+          <TabsList className="h-9">
+            <TabsTrigger value="result" className="h-7 px-2.5">
               Результат
             </TabsTrigger>
-            <TabsTrigger value="history" className="h-6 px-2.5">
+            <TabsTrigger value="history" className="h-7 px-2.5">
               История
             </TabsTrigger>
           </TabsList>
@@ -164,13 +164,13 @@ export function ResultsPanel({
                 <FileText className="h-3.5 w-3.5 mr-1" /> В тикеты
               </Button>
             )}
-            <Button variant="ghost" size="icon" onClick={onGoogleDocs} title="Открыть в Google Docs">
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={onGoogleDocs} title="Открыть в Google Docs">
               <ExternalLink className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={onCopy} title="Копировать">
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={onCopy} title="Копировать">
               <Copy className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={onDownload} title="Скачать .md">
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={onDownload} title="Скачать .md">
               <Download className="h-4 w-4" />
             </Button>
           </div>
@@ -387,7 +387,7 @@ const STAT_ITEMS: Array<{ key: keyof SyncStats; label: string }> = [
 
 function StatsBar({ stats }: { stats: SyncStats }) {
   return (
-    <div className="grid grid-cols-4 gap-2 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-variant)] p-3">
+    <div className="grid grid-cols-4 gap-2 rounded-md border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-variant)] p-3">
       {STAT_ITEMS.map(({ key, label }) => (
         <div key={key} className="text-center">
           <div className="text-xl font-bold">{stats[key]}</div>

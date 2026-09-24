@@ -51,7 +51,7 @@ export function AuthOverlay({ open, defaultProvider, onSubmit, onGuest }: AuthOv
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
       <form
         onSubmit={submit}
-        className="flex w-full max-w-md flex-col gap-4 rounded-2xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] p-8 shadow-2xl"
+        className="flex w-full max-w-md flex-col gap-4 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] p-8 shadow-2xl"
       >
         <div className="text-center">
           <h2 className="text-title-lg font-bold text-[var(--md-sys-color-on-surface)]">
