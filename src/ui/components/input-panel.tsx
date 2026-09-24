@@ -98,7 +98,7 @@ export function InputPanel({
         <h2 className="text-title-sm font-semibold text-[var(--md-sys-color-on-surface)]">
           1. Входные данные
         </h2>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           <Button variant="secondary" size="sm" onClick={onDemo} title="Демо-пример без API-ключа">
             <Play className="h-3.5 w-3.5" /> Демо
           </Button>

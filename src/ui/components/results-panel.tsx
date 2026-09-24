@@ -124,7 +124,7 @@ export function ResultsPanel({
       <Tabs
         value={tab}
         onValueChange={(v) => setTab(v as ResultTab)}
-        className="flex min-h-0 flex-1 flex-col"
+        className="flex min-h-0 flex-1 flex-col gap-3"
       >
       <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-3">
@@ -141,7 +141,7 @@ export function ResultsPanel({
           </TabsList>
         </div>
         {view.kind === 'report' && (
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             <span className="text-label-sm text-[var(--md-sys-color-on-surface-variant)] mr-1">
               {MODE_LABELS[view.mode]}
             </span>
@@ -176,7 +176,7 @@ export function ResultsPanel({
           </div>
         )}
         {view.kind === 'streaming' && (
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             <span className="text-label-sm text-[var(--md-sys-color-on-surface-variant)] mr-1">
               {MODE_LABELS[view.mode]}
             </span>
@@ -302,7 +302,7 @@ export function ResultsPanel({
                       {artifactPreview(a.markdown)}
                     </p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-1.5">
+                  <div className="flex shrink-0 items-center gap-2">
                     <Button variant="secondary" size="sm" onClick={() => onOpenArtifact(a.id)}>
                       Открыть
                     </Button>
