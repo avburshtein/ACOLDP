@@ -4,4 +4,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://acoldp.ux42.studio/sitemap.xml
+Sitemap: https://ai.orchestrator.ux42.studio/sitemap.xml

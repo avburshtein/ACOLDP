@@ -198,13 +198,13 @@ npm run deploy:pages   # = npm run build + wrangler pages deploy dist/ui
 ### 3. Домен и финальная настройка
 
 1. Cloudflare Dashboard → Pages → проект → Custom domains → Add domain
-   (например `acoldp.ux42.studio`; CNAME Cloudflare создаст сам)
+   (например `ai.orchestrator.ux42.studio`; CNAME Cloudflare создаст сам)
 2. Добавить новый Origin в allowlist воркера — либо он уже есть в
    `DEFAULT_ORIGINS`, либо задать переменную:
    ```toml
    # wrangler.toml
    [vars]
-   ALLOWED_ORIGINS = "https://acoldp.ux42.studio,http://localhost:5173"
+   ALLOWED_ORIGINS = "https://ai.orchestrator.ux42.studio,http://localhost:5173"
    ```
    Проверить можно так — чужой Origin должен получить 403:
    ```bash

@@ -14,4 +14,4 @@ compatibility_flags = ["nodejs_compat"]
 # для проверки конкретного preview-деплоя Pages (у каждого свой поддомен).
 #
 # [vars]
-# ALLOWED_ORIGINS = "https://acoldp.ux42.studio,http://localhost:5173"
+# ALLOWED_ORIGINS = "https://ai.orchestrator.ux42.studio,http://localhost:5173"

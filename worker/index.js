@@ -33,7 +33,7 @@ import {
 // Worker никогда не хранит чужие ключи. Для настоящей защиты от перебора —
 // rate limiting / WAF в Cloudflare (Dashboard), это отдельная настройка.
 const DEFAULT_ORIGINS = [
-  "https://acoldp.ux42.studio",              // продовый домен
+  "https://ai.orchestrator.ux42.studio",      // продовый домен
   "https://ai-orchestrator-ui-8vh.pages.dev", // алиас Pages (пока нет домена)
   "http://localhost:5173",                    // локальная разработка
   "http://127.0.0.1:5173"
