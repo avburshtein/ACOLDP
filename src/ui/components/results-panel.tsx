@@ -264,7 +264,10 @@ export function ResultsPanel({
           </div>
         )}
 
-        {view.kind === 'streaming' && (
+        {/* Карточка стрима появляется только с первым чанком. До неё в блоке
+            пусто, а статус генерации живёт под кнопками — иначе под текстом
+            статуса висело бы одиночное многоточие, похожее на «точки». */}
+        {view.kind === 'streaming' && view.markdown.trim() !== '' && (
           <div className="space-y-4">
             {view.mode === 'CASE_DRAFT' && (
               <CompletenessBanner markdown={view.markdown} />
@@ -370,7 +373,7 @@ function StreamingPre({ markdown }: { markdown: string }) {
       ref={ref}
       className="custom-scrollbar max-h-[60vh] overflow-y-auto whitespace-pre-wrap break-words font-mono text-body-sm leading-relaxed text-[var(--md-sys-color-on-surface)]"
     >
-      {markdown || '…'}
+      {markdown}
     </pre>
   );
 }
