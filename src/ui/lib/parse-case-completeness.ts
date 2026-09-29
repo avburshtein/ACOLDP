@@ -34,7 +34,8 @@ export function parseCaseCompleteness(markdown: string): CaseCompleteness | null
   const needsMatch = markdown.match(NEEDS_RE);
   if (needsMatch) {
     const raw = needsMatch[1].trim();
-    if (raw && raw !== '❓') {
+    // Плейсхолдер пустого поля: `?` (текущий контракт) либо `❓` (старые артефакты)
+    if (raw && raw !== '?' && raw !== '❓') {
       needsDesigner =
         raw.length > NEEDS_MAX ? `${raw.slice(0, NEEDS_MAX - 1).trimEnd()}…` : raw;
     }

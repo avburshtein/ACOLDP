@@ -382,6 +382,89 @@
   }
   :where(.dark, [data-theme="dark"]) .glass-shadow.glass-ghost[data-destructive]:hover svg { color: rgb(255 120 128 / 0.65); }
 
+  /* ==== Текстовые кнопки-«ссылки» (Button variant="text") ====
+     Без фона и бордера; цвет текста — приглушённый серо-лавандовый перлив, но
+     заметно серый (тона .glass-shadow::before, смешанные с серым ~50%):
+     перелив остаётся, кричащей «радуги» больше нет. Иконка — тот же тон. */
+  .btn-shimmer-text {
+    background-image: linear-gradient(90deg,
+      rgb(182 142 167 / 0.88),
+      rgb(157 145 192 / 0.85),
+      rgb(139 171 164 / 0.80));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    transition: filter .16s ease;
+  }
+  .btn-shimmer-text:hover { filter: brightness(1.06) saturate(1.08); }
+  .btn-shimmer-text:disabled { filter: grayscale(1) opacity(.6); }
+  .btn-shimmer-icon { color: rgb(150 140 175 / 0.88); }
+  .btn-shimmer-icon svg { color: rgb(150 140 175 / 0.88); }
+  :where(.dark, [data-theme="dark"]) .btn-shimmer-text {
+    background-image: linear-gradient(90deg,
+      rgb(233 191 211 / 0.90),
+      rgb(188 176 226 / 0.85),
+      rgb(171 209 199 / 0.80));
+  }
+  :where(.dark, [data-theme="dark"]) .btn-shimmer-icon,
+  :where(.dark, [data-theme="dark"]) .btn-shimmer-icon svg { color: rgb(196 184 222 / 0.88); }
+  /* Иконка внутри текстовой кнопки: gradient-clip красит только текст,
+     иконке нужен явный тон, иначе наследует color: transparent. */
+  .btn-shimmer-text svg { color: rgb(150 140 175 / 0.88); }
+  :where(.dark, [data-theme="dark"]) .btn-shimmer-text svg { color: rgb(196 184 222 / 0.88); }
+
+  /* «В тикеты» — заметная переливашка-единорожка: это главное действие
+     результата, ему нужен акцент, как у Stop. Чуть ярче карточных действий. */
+  .btn-shimmer-strong {
+    background-image: linear-gradient(90deg,
+      rgb(206 126 178 / 0.95),
+      rgb(156 126 224 / 0.92),
+      rgb(124 190 176 / 0.88));
+  }
+  :where(.dark, [data-theme="dark"]) .btn-shimmer-strong {
+    background-image: linear-gradient(90deg,
+      rgb(255 172 212 / 0.95),
+      rgb(186 158 255 / 0.92),
+      rgb(152 228 208 / 0.88));
+  }
+
+  /* ==== Переливающийся текст во время генерации ====
+     Как «размышление» у ИИ-чатов: бегущая по тексту волна градиента.
+     Анимируется background-position, поэтому размеры не прыгают. */
+  @keyframes shimmer-flow {
+    from { background-position: 200% center; }
+    to { background-position: -100% center; }
+  }
+  .shimmer-flow {
+    background-image: linear-gradient(100deg,
+      var(--md-sys-color-on-surface) 0%,
+      var(--md-sys-color-on-surface) 30%,
+      rgb(206 126 178 / 0.95) 45%,
+      rgb(156 126 224 / 0.92) 55%,
+      rgb(124 190 176 / 0.88) 65%,
+      var(--md-sys-color-on-surface) 78%,
+      var(--md-sys-color-on-surface) 100%);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shimmer-flow 2.6s linear infinite;
+  }
+  :where(.dark, [data-theme="dark"]) .shimmer-flow {
+    background-image: linear-gradient(100deg,
+      rgb(238 238 246) 0%,
+      rgb(238 238 246) 30%,
+      rgb(255 172 212 / 0.95) 45%,
+      rgb(186 158 255 / 0.92) 55%,
+      rgb(152 228 208 / 0.88) 65%,
+      rgb(238 238 246) 78%,
+      rgb(238 238 246) 100%);
+  }
+  /* Уважаем системную настройку: без движения — просто градиент */
+  @media (prefers-reduced-motion: reduce) {
+    .shimmer-flow { animation: none; background-position: 50% center; }
+  }
+
   /* ==== Акцент: тёмное дымчатое стекло ==== */
   .glass-accent {
     background: linear-gradient(180deg, rgb(40 37 50 / 0.92), rgb(23 21 31 / 0.95));

@@ -14,6 +14,8 @@ const buttonVariants = cva(
                 outline: `${glassCls}`,
                 secondary: `${glassCls}`,
                 ghost: `${glassCls} glass-ghost`,
+                /** Текстовая кнопка-«ссылка»: без фона и бордера, цвет — приглушённый серо-лавандовый перлив */
+                text: 'btn-shimmer-text bg-transparent border-transparent shadow-none focus-visible:ring-2 focus-visible:ring-[var(--md-sys-color-primary)] focus-visible:ring-offset-2',
                 link: 'bg-transparent text-[var(--md-sys-color-primary)] underline-offset-4 hover:underline',
             },
             size: {

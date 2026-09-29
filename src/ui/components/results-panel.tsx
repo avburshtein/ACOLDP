@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowUp, BookOpen, CircleAlert, Copy, Download, ExternalLink, FileText, History, Info, MessageSquare, Palette, Plus, Sparkles, Square, Trash2 } from 'lucide-react';
+import { ArrowUp, BookOpen, CircleAlert, Copy, Download, ExternalLink, FileText, History, Info, MessageSquare, Palette, Plus, Trash2 } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { JiraResult, Mode, SyncStats } from '@/types';
@@ -59,10 +59,8 @@ const MODE_ARTIFACT_ICONS: Record<string, React.ElementType> = {
   CASE_DRAFT: Palette,
 };
 
-/** Действия карточек (история, Jira): заметнее on-surface-variant, но не чёрные (§5) */
-const cardActionCls =
-  'text-[var(--md-sys-color-on-surface)]/80 hover:text-[var(--md-sys-color-on-surface)]';
-const cardActionIconCls = '[&_svg]:text-[var(--md-sys-color-on-surface)]/80';
+/** Действия карточек (история, Jira): текстовые кнопки-«ссылки» — приглушённый серо-лавандовый перлив (§5) */
+const cardActionCls = 'btn-shimmer-icon';
 
 /** Дата артефакта: «сегодня 14:32», «вчера», иначе DD.MM.YYYY */
 function formatArtifactDate(ts: number): string {
@@ -163,16 +161,16 @@ export function ResultsPanel({
               <span className="text-label-sm text-[var(--md-sys-color-on-surface-variant)]">
                 Генерация…
               </span>
-              <span className="w-10 text-right font-mono text-label-sm text-[var(--md-sys-color-on-surface)]">
-                {formatTime(view.seconds)}
-              </span>
               <Button
-                variant="secondary"
+                variant="default"
                 size="sm"
                 onClick={onStop}
                 title="Остановить и сохранить часть"
               >
-                <Square className="h-3.5 w-3.5 mr-1" /> Stop
+                Stop
+                <span className="font-mono text-label-sm opacity-70">
+                  {formatTime(view.seconds)}
+                </span>
               </Button>
             </>
           ) : (
@@ -182,12 +180,13 @@ export function ResultsPanel({
               </span>
               {view.mode === 'REPORT' && (
                 <Button
-                  variant="default"
+                  variant="text"
                   size="sm"
+                  className="btn-shimmer-strong"
                   onClick={onConvert}
                   title="Отправить результат в Jira как входные данные"
                 >
-                  <FileText className="h-3.5 w-3.5 mr-1" /> В тикеты
+                  <FileText className="h-3.5 w-3.5" /> В тикеты
                 </Button>
               )}
               <Button
@@ -228,25 +227,24 @@ export function ResultsPanel({
       <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto pr-1">
         <TabsContent value="result" className="mt-0 h-full">
         {view.kind === 'placeholder' && (
-          <div className="flex h-full select-none flex-col items-center justify-center gap-3 text-[var(--md-sys-color-on-surface-variant)]">
-            <Sparkles className="h-10 w-10" />
+          <div className="flex h-full select-none flex-col items-center justify-center text-[var(--md-sys-color-on-surface-variant)]">
             <p className="text-body-md">Результаты появятся здесь</p>
           </div>
         )}
 
         {view.kind === 'loading' && (
-          <div className="flex h-full flex-col items-center justify-center gap-4 text-[var(--md-sys-color-on-surface-variant)]">
-            <div
-              className="h-9 w-9 animate-spin rounded-full border-[3px] border-[var(--md-sys-color-outline-variant)] border-t-[var(--md-sys-color-on-surface)]"
-              role="progressbar"
-              aria-label="Загрузка"
-            />
-            <div className="font-mono text-2xl font-bold text-[var(--md-sys-color-on-surface)]">
-              {formatTime(view.seconds)}
-            </div>
-            <p className="max-w-[220px] text-center text-body-sm">
+          <div
+            className="flex h-full flex-col items-center justify-center gap-3"
+            role="status"
+            aria-live="polite"
+          >
+            {/* Крупный переливающийся текст вместо точек-спиннера — как «думает» ИИ */}
+            <p className="shimmer-flow text-center text-headline-sm">
               {loadingHint(view.seconds)}
             </p>
+            <div className="font-mono text-label-sm text-[var(--md-sys-color-on-surface-variant)]">
+              {formatTime(view.seconds)}
+            </div>
           </div>
         )}
 
@@ -339,18 +337,17 @@ export function ResultsPanel({
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <Button
-                      variant="ghost"
+                      variant="text"
                       size="sm"
-                      className={cardActionCls}
                       onClick={() => onOpenArtifact(a.id)}
                       title="Открыть артефакт в панели результата"
                     >
                       Открыть
                     </Button>
                     <Button
-                      variant="ghost"
+                      variant="text"
                       size="icon"
-                      className={cn('h-9 w-9', cardActionCls, cardActionIconCls)}
+                      className={cn('h-9 w-9', cardActionCls)}
                       aria-label="Удалить артефакт"
                       title="Удалить артефакт из истории"
                       onClick={() => {
@@ -505,8 +502,7 @@ function ResultCard({ result: r }: { result: JiraResult }) {
           target="_blank"
           rel="noreferrer"
           className={cn(
-            buttonVariants({ variant: 'ghost', size: 'sm' }),
-            cardActionCls,
+            buttonVariants({ variant: 'text', size: 'sm' }),
             'shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--md-sys-color-primary)] focus-visible:ring-offset-2',
           )}
         >
