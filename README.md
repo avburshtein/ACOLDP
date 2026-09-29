@@ -198,15 +198,44 @@ npm run deploy:pages   # = npm run build + wrangler pages deploy dist/ui
 ### 3. Домен и финальная настройка
 
 1. Cloudflare Dashboard → Pages → проект → Custom domains → Add domain
-2. Открыть сайт, нажать ⚙️ Settings, вставить **Worker API URL** (именно
+   (например `acoldp.ux42.studio`; CNAME Cloudflare создаст сам)
+2. Добавить новый Origin в allowlist воркера — либо он уже есть в
+   `DEFAULT_ORIGINS`, либо задать переменную:
+   ```toml
+   # wrangler.toml
+   [vars]
+   ALLOWED_ORIGINS = "https://acoldp.ux42.studio,http://localhost:5173"
+   ```
+   Проверить можно так — чужой Origin должен получить 403:
+   ```bash
+   curl -i -X POST https://<worker> -H 'Origin: https://evil.example' \
+     -H 'Content-Type: application/json' -d '{}' | head -1   # HTTP/2 403
+   ```
+3. Открыть сайт, нажать ⚙️ Settings, вставить **Worker API URL** (именно
    `*workers.dev`, а не адрес сайта) и Jira-креды
-3. Нажать «Сохранить», затем войти с провайдером и API-ключом
+4. Нажать «Сохранить», затем войти с провайдером и API-ключом
+
+> **Preview-деплои Pages.** У каждого деплоя свой поддомен
+> (`<hash>.ai-orchestrator-ui-8vh.pages.dev`), и его Origin в allowlist не
+> входит. Чтобы проверить конкретный деплой — добавьте его в
+> `ALLOWED_ORIGINS`. Постоянные ссылки на проекте (алиас и свой домен)
+> работают без правок.
+
+> **Граница защиты.** Origin — это браузерный контроль, а не полноценная
+> аутентификация: клиент без заголовка Origin (curl, серверный скрипт) её
+> не проходит. Настоящую защиту от перебора и злоупотреблений даёт
+> rate limiting / WAF в Cloudflare Dashboard — это отдельная настройка,
+> и для публичного релиза её стоит включить.
 
 ---
 
 ## Режимы и контракт API
 
-Воркер принимает **только POST** (CORS: `Access-Control-Allow-Origin: *`).
+Воркер принимает **только POST**. CORS — по allowlist, а не `*`: Worker
+отвечает только перечисленным Origin (список — `DEFAULT_ORIGINS` в
+`worker/index.js`, переопределяется переменной `ALLOWED_ORIGINS` в
+`wrangler.toml`). Так он не остаётся анонимным публичным релеем в
+LLM-провайдеры.
 
 | `mode` | Что делает | Стриминг | Ключ LLM |
 |---|---|---|---|

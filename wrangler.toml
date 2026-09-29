@@ -6,3 +6,12 @@ compatibility_flags = ["nodejs_compat"]
 # Worker will be available at:
 # https://ai-orchestrator-api.YOUR_SUBDOMAIN.workers.dev
 # Or bind to custom domain in Cloudflare Dashboard
+
+# ── CORS ────────────────────────────────────────────────────────────────
+# Worker отвечает только перечисленным Origin (см. DEFAULT_ORIGINS в
+# worker/index.js). Чтобы переопределить без правки кода, раскомментируйте
+# [vars] ниже — список Origin через запятую. Нужно при смене домена или
+# для проверки конкретного preview-деплоя Pages (у каждого свой поддомен).
+#
+# [vars]
+# ALLOWED_ORIGINS = "https://acoldp.ux42.studio,http://localhost:5173"

@@ -1,0 +1,7 @@
+# AI Context Orchestrator — публичный MVP, индексируется намеренно.
+# Пока проект не готов к публикации — замените Allow на Disallow: /
+
+User-agent: *
+Allow: /
+
+Sitemap: https://acoldp.ux42.studio/sitemap.xml

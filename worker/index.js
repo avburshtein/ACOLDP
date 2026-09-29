@@ -2,8 +2,12 @@
 // AI Context Orchestrator — Cloudflare Worker (API only)
 // Проект: ACOLDP
 //
-// ENV variables (set in Cloudflare Dashboard → Settings → Variables):
-//   None required — all credentials come from user's session.
+// ENV variables (wrangler.toml [vars] или Dashboard → Settings → Variables):
+//   ALLOWED_ORIGINS — необязательно. Список Origin через запятую, которым
+//                     Worker отвечает. Если не задан — берётся DEFAULT_ORIGINS
+//                     ниже. Менять код под каждый деплой не нужно.
+//
+// ENV secrets: не требуются — все креды приходят из сессии пользователя.
 //   Worker acts as a transparent proxy to LLM and Jira APIs.
 // ============================================================
 
@@ -18,23 +22,79 @@ import {
   DEDUP_JSON_SCHEMA
 } from "../src/api/prompts.js";
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type"
-};
+// ── CORS: явный allowlist вместо "*" ────────────────────────────────────────
+// "*" делал Worker анонимным публичным релеем в LLM-провайдеры: любой сайт
+// и любой curl могли слать запросы через чужую инфраструктуру. Теперь Origin
+// сверяется со списком.
+//
+// ВАЖНО, честно про границу: Origin — это браузерный контроль, а не стена.
+// Клиент без Origin (curl, серверный скрипт) проверку не проходит по ветке
+// «заголовка нет», но такие запросы всё равно упираются в требование ключа:
+// Worker никогда не хранит чужие ключи. Для настоящей защиты от перебора —
+// rate limiting / WAF в Cloudflare (Dashboard), это отдельная настройка.
+const DEFAULT_ORIGINS = [
+  "https://acoldp.ux42.studio",              // продовый домен
+  "https://ai-orchestrator-ui-8vh.pages.dev", // алиас Pages (пока нет домена)
+  "http://localhost:5173",                    // локальная разработка
+  "http://127.0.0.1:5173"
+];
+
+function allowedOrigins(env) {
+  const raw = (env && env.ALLOWED_ORIGINS) || "";
+  const list = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  return list.length ? list : DEFAULT_ORIGINS;
+}
+
+/** Заголовки CORS; Origin проставляется только если он разрешён */
+function corsHeaders(origin, env, extra) {
+  const headers = {
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    // Origin разный у разных сайтов — кэши и CDN обязаны это учитывать
+    Vary: "Origin",
+    ...extra
+  };
+  if (origin && allowedOrigins(env).includes(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+  return headers;
+}
 
 export default {
+  /**
+   * Обёртка: проверка Origin + CORS-заголовки на КАЖДЫЙ ответ (включая SSE).
+   * Так заголовки не нужно помнить в каждом return внутри хендлера.
+   */
   async fetch(request, env) {
-    // Preflight
-    if (request.method === "OPTIONS") {
-      return new Response(null, { headers: CORS });
+    const origin = request.headers.get("Origin") || "";
+
+    // Чужой Origin — не отвечаем вовсе (и не подсказываем, что за режимы есть)
+    if (origin && !allowedOrigins(env).includes(origin)) {
+      return new Response(JSON.stringify({ error: "Origin not allowed" }), {
+        status: 403,
+        headers: { ...corsHeaders("", env), "Content-Type": "application/json" },
+      });
     }
 
-    // Only POST
-    if (request.method !== "POST") {
-      return json({ error: "Only POST allowed" }, 405);
+    // Preflight
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: corsHeaders(origin, env) });
     }
+
+    const res = await handleRequest(request, env);
+
+    const headers = new Headers(res.headers);
+    for (const [k, v] of Object.entries(corsHeaders(origin, env))) headers.set(k, v);
+    // body передаём как есть — стрим SSE не должен терять текучесть
+    return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
+  },
+};
+
+async function handleRequest(request, env) {
+  // Only POST
+  if (request.method !== "POST") {
+    return json({ error: "Only POST allowed" }, 405);
+  }
 
     try {
       const body = await request.json();
@@ -230,14 +290,14 @@ export default {
     } catch (err) {
       return json({ error: err.message }, 500);
     }
-  }
-};
+}
 
 // ── Helper ───────────────────────────────────────────────────
+// CORS-заголовки сюда НЕ кладём: их навешивает обёртка fetch выше.
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data, null, 2), {
     status,
-    headers: { ...CORS, "Content-Type": "application/json" }
+    headers: { "Content-Type": "application/json" }
   });
 
 // ── SSE helper (HANDOFF 03 §3.1) ─────────────────────────────
@@ -289,7 +349,7 @@ function sseResponse(provider, baseUrl, apiKey, model, systemPrompt, userText) {
 
   return new Response(readable, {
     headers: {
-      ...CORS,
+      // CORS добавит обёртка fetch — иначе стрим шёл бы без заголовков
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache"
     }

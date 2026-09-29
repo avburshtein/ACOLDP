@@ -8,7 +8,7 @@
     "dev:worker": "node node_modules/wrangler/bin/wrangler.js dev worker/index.js",
     "dev:ui": "node node_modules/vite/bin/vite.js",
     "dev": "node node_modules/vite/bin/vite.js",
-    "build": "node node_modules/vite/bin/vite.js build",
+    "build": "node scripts/clean-dist.mjs && node node_modules/vite/bin/vite.js build",
     "typecheck": "node node_modules/typescript/lib/tsc.js --noEmit && node --no-warnings --experimental-vm-modules scripts/check-js-syntax.mjs",
     "deploy:worker": "node node_modules/wrangler/bin/wrangler.js deploy worker/index.js",
     "deploy:pages": "node node_modules/vite/bin/vite.js build && node node_modules/wrangler/bin/wrangler.js pages deploy dist/ui --project-name=ai-orchestrator-ui"
