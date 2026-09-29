@@ -1,15 +1,22 @@
 import type { JiraProject, JiraResult, Mode, SyncStats, UserConfig } from '@/types';
 
 /** Единая точка POST к Worker с нормализацией ошибок */
-async function post<T>(workerUrl: string, payload: Record<string, unknown>): Promise<T> {
+async function post<T>(
+  workerUrl: string,
+  payload: Record<string, unknown>,
+  signal?: AbortSignal,
+): Promise<T> {
   let res: Response;
   try {
     res = await fetch(workerUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify(payload),
+      signal,
     });
-  } catch {
+  } catch (err) {
+    // Отмена запроса — пробрасываем как есть: вызывающий различает по err.name
+    if (err instanceof Error && err.name === 'AbortError') throw err;
     throw new Error('Нет соединения с Worker API. Проверь URL в Settings и подключение к сети.');
   }
 
@@ -91,15 +98,20 @@ export const api = {
     artifact: { markdown: string; mode: Mode },
     model: string,
     config: UserConfig,
+    signal?: AbortSignal,
   ) {
-    return post<ReportResponse>(workerUrl, {
-      raw_text: supplement,
-      mode: 'REFINE',
-      artifact_markdown: artifact.markdown,
-      artifact_mode: artifact.mode,
-      selected_model: model,
-      user_config: config,
-    });
+    return post<ReportResponse>(
+      workerUrl,
+      {
+        raw_text: supplement,
+        mode: 'REFINE',
+        artifact_markdown: artifact.markdown,
+        artifact_mode: artifact.mode,
+        selected_model: model,
+        user_config: config,
+      },
+      signal,
+    );
   },
 
   jiraProjects(workerUrl: string, config: UserConfig) {

@@ -331,6 +331,11 @@ export function App() {
 
     setView({ kind: 'loading', seconds: 0 });
 
+    // Контроллер нужен, чтобы Stop работал и здесь: REFINE идёт обычным POST,
+    // а не SSE, но отменять его всё равно должно быть можно
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     try {
       const config = buildConfig();
       const modelValue = model.trim();
@@ -341,8 +346,10 @@ export function App() {
         { markdown: artifactMarkdown, mode: artifactMode },
         modelParam,
         config,
+        controller.signal,
       );
       if (runId !== runIdRef.current) return;
+      abortRef.current = null;
       const updated = data.report_markdown;
       setLastReport(updated);
       setLastMode(artifactMode);
@@ -367,6 +374,13 @@ export function App() {
       show('✓ Артефакт дополнен');
     } catch (err) {
       if (runId !== runIdRef.current) return;
+      abortRef.current = null;
+      // Stop во время «Дополнить»: артефакт не изменился, возвращаем его на экран
+      if (err instanceof Error && err.name === 'AbortError') {
+        setView({ kind: 'report', markdown: artifactMarkdown, demo: false, mode: artifactMode });
+        show('Остановлено — артефакт не изменён');
+        return;
+      }
       setView({
         kind: 'error',
         message: err instanceof Error ? err.message : String(err),

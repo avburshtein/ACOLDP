@@ -430,34 +430,42 @@
 
   /* ==== Переливающийся текст во время генерации ====
      Как «размышление» у ИИ-чатов: бегущая по тексту волна градиента.
-     Анимируется background-position, поэтому размеры не прыгают. */
+
+     Про равномерность: ход должен быть КРАТЕН периоду градиента
+     (background-size), иначе на стыке циклов картинка сдвигается рывком
+     и глаз читает это как «подёргивание». Здесь период = 200%, ход
+     = ровно 200% (один тайл) — цикл бесшовный, скорость постоянная.
+     Длинные плашки одного цвета внутри градиента тоже убираем: они
+     дают участки, где в тексте будто «ничего не происходит». */
   @keyframes shimmer-flow {
-    from { background-position: 200% center; }
-    to { background-position: -100% center; }
+    from { background-position: 0% center; }
+    to { background-position: -200% center; }
   }
   .shimmer-flow {
     background-image: linear-gradient(100deg,
       var(--md-sys-color-on-surface) 0%,
       var(--md-sys-color-on-surface) 30%,
-      rgb(206 126 178 / 0.95) 45%,
-      rgb(156 126 224 / 0.92) 55%,
-      rgb(124 190 176 / 0.88) 65%,
-      var(--md-sys-color-on-surface) 78%,
+      rgb(206 126 178 / 0.90) 40%,
+      rgb(206 126 178 / 0.96) 47%,
+      rgb(156 126 224 / 0.96) 53%,
+      rgb(124 190 176 / 0.90) 60%,
+      var(--md-sys-color-on-surface) 70%,
       var(--md-sys-color-on-surface) 100%);
     background-size: 200% 100%;
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    animation: shimmer-flow 2.6s linear infinite;
+    animation: shimmer-flow 2.4s linear infinite;
   }
   :where(.dark, [data-theme="dark"]) .shimmer-flow {
     background-image: linear-gradient(100deg,
       rgb(238 238 246) 0%,
       rgb(238 238 246) 30%,
-      rgb(255 172 212 / 0.95) 45%,
-      rgb(186 158 255 / 0.92) 55%,
-      rgb(152 228 208 / 0.88) 65%,
-      rgb(238 238 246) 78%,
+      rgb(255 172 212 / 0.90) 40%,
+      rgb(255 172 212 / 0.96) 47%,
+      rgb(186 158 255 / 0.96) 53%,
+      rgb(152 228 208 / 0.90) 60%,
+      rgb(238 238 246) 70%,
       rgb(238 238 246) 100%);
   }
   /* Уважаем системную настройку: без движения — просто градиент */

@@ -153,14 +153,60 @@ export function ResultsPanel({
         </TabsList>
       </div>
 
-      {/* Действия — вторым рядом: на уровне селектора режимов левой панели */}
-      {(view.kind === 'report' || view.kind === 'streaming') && (
-        <div className="flex flex-wrap items-center gap-2">
-          {view.kind === 'streaming' ? (
-            <>
-              <span className="text-label-sm text-[var(--md-sys-color-on-surface-variant)]">
-                Генерация…
-              </span>
+      {/* Действия — вторым рядом: на уровне селектора режимов левой панели.
+          Статус генерации — переливающимся текстом СЛЕВА под рядом кнопок,
+          а не по центру блока результатов: центр занят приезжающим текстом. */}
+      {(view.kind === 'report' || view.kind === 'streaming' || view.kind === 'loading') && (
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {view.kind === 'report' ? (
+              <>
+                <span className="text-label-sm text-[var(--md-sys-color-on-surface-variant)] mr-1">
+                  {MODE_LABELS[view.mode]}
+                </span>
+                {view.mode === 'REPORT' && (
+                  <Button
+                    variant="text"
+                    size="sm"
+                    className="btn-shimmer-strong"
+                    onClick={onConvert}
+                    title="Отправить результат в Jira как входные данные"
+                  >
+                    <FileText className="h-3.5 w-3.5" /> В тикеты
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9"
+                  onClick={onGoogleDocs}
+                  aria-label="Открыть в Google Docs"
+                  title="Открыть в Google Docs"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9"
+                  onClick={onCopy}
+                  aria-label="Копировать результат"
+                  title="Копировать результат"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9"
+                  onClick={onDownload}
+                  aria-label="Скачать .md"
+                  title="Скачать .md"
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              </>
+            ) : (
               <Button
                 variant="default"
                 size="sm"
@@ -172,54 +218,12 @@ export function ResultsPanel({
                   {formatTime(view.seconds)}
                 </span>
               </Button>
-            </>
-          ) : (
-            <>
-              <span className="text-label-sm text-[var(--md-sys-color-on-surface-variant)] mr-1">
-                {MODE_LABELS[view.mode]}
-              </span>
-              {view.mode === 'REPORT' && (
-                <Button
-                  variant="text"
-                  size="sm"
-                  className="btn-shimmer-strong"
-                  onClick={onConvert}
-                  title="Отправить результат в Jira как входные данные"
-                >
-                  <FileText className="h-3.5 w-3.5" /> В тикеты
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9"
-                onClick={onGoogleDocs}
-                aria-label="Открыть в Google Docs"
-                title="Открыть в Google Docs"
-              >
-                <ExternalLink className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9"
-                onClick={onCopy}
-                aria-label="Копировать результат"
-                title="Копировать результат"
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9"
-                onClick={onDownload}
-                aria-label="Скачать .md"
-                title="Скачать .md"
-              >
-                <Download className="h-4 w-4" />
-              </Button>
-            </>
+            )}
+          </div>
+          {view.kind !== 'report' && (
+            <p className="shimmer-flow text-left text-body-md" role="status">
+              {loadingHint(view.seconds)}
+            </p>
           )}
         </div>
       )}
@@ -229,22 +233,6 @@ export function ResultsPanel({
         {view.kind === 'placeholder' && (
           <div className="flex h-full select-none flex-col items-center justify-center text-[var(--md-sys-color-on-surface-variant)]">
             <p className="text-body-md">Результаты появятся здесь</p>
-          </div>
-        )}
-
-        {view.kind === 'loading' && (
-          <div
-            className="flex h-full flex-col items-center justify-center gap-3"
-            role="status"
-            aria-live="polite"
-          >
-            {/* Крупный переливающийся текст вместо точек-спиннера — как «думает» ИИ */}
-            <p className="shimmer-flow text-center text-headline-sm">
-              {loadingHint(view.seconds)}
-            </p>
-            <div className="font-mono text-label-sm text-[var(--md-sys-color-on-surface-variant)]">
-              {formatTime(view.seconds)}
-            </div>
           </div>
         )}
 
