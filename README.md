@@ -227,6 +227,59 @@ npm run deploy:pages   # = npm run build + wrangler pages deploy dist/ui
 > rate limiting / WAF в Cloudflare Dashboard — это отдельная настройка,
 > и для публичного релиза её стоит включить.
 
+### 4. Перенос воркера на другой аккаунт (зона домена)
+
+Worker и сайт разнесены по разным адресам намеренно:
+
+| Что | Адрес | Как привязан |
+|---|---|---|
+| Сайт (Pages) | `ai.orchestrator.ux42.studio` | CNAME → `ai-orchestrator-ui-8vh.pages.dev` |
+| API (Worker) | `api.ux42.studio` | Custom Domain на воркере |
+
+Один hostname нельзя отдать двум продуктам: если повесить Worker на адрес
+сайта, custom domain не привяжется к Pages (или, что хуже, Worker
+перехватит имя и сайт перестанет открываться).
+
+**Шаги в аккаунте, где лежит зона `ux42.studio`:**
+
+1. Деплой воркера из исходников репозитория:
+   ```bash
+   npm install
+   npx wrangler login
+   npx wrangler deploy
+   ```
+   Секреты заводить **не нужно** — воркер прозрачный, все креды приходят
+   от клиента в теле запроса. `main` уже указан в `wrangler.toml`
+   (`worker/index.js`), руками ничего править не надо.
+
+2. Привязать домен (один раз):
+   Workers & Pages → `ai-orchestrator-api` → Settings → Domains & Routes
+   → Add → Custom Domain → `api.ux42.studio`. DNS и SSL Cloudflare
+   создаст сам. Подождать 5–10 минут на выпуск сертификата.
+
+3. Привязать сайт — Pages-проект переносить **не нужно**: для субдомена
+   достаточно CNAME в DNS зоны:
+   ```
+   CNAME   ai.orchestrator   →   ai-orchestrator-ui-8vh.pages.dev
+   ```
+
+4. Проверить:
+   ```bash
+   # API отвечает и пропускает сайт
+   curl -i -X POST https://api.ux42.studio -d '{}' \
+     -H 'Origin: https://ai.orchestrator.ux42.studio' \
+     -H 'Content-Type: application/json' | head -1
+   # чужой Origin — 403
+   curl -o /dev/null -w '%{http_code}\n' -X POST https://api.ux42.studio \
+     -H 'Origin: https://evil.example' -d '{}' \
+     -H 'Content-Type: application/json'
+   ```
+
+> Если в браузере адрес воркера был вбит руками, он лежит в
+> `localStorage` (`acoldp_cfg_worker-url`) и переживёт смену дефолта —
+> после переноса ключ надо удалить, иначе приложение продолжит стучаться
+> в старый адрес.
+
 ---
 
 ## Режимы и контракт API

@@ -4,14 +4,29 @@ compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
 
 # Worker will be available at:
-# https://ai-orchestrator-api.YOUR_SUBDOMAIN.workers.dev
-# Or bind to custom domain in Cloudflare Dashboard
+#   https://ai-orchestrator-api.YOUR_SUBDOMAIN.workers.dev
+# после переноса: https://api.ux42.studio
+#
+# ── Custom domain ────────────────────────────────────────────────────────
+# Намеренно НЕ прописан здесь как [[routes]] custom_domain: такая запись
+# работает только при деплое из аккаунта, где лежит зона ux42.studio, и
+# сломает `wrangler deploy` из любого другого аккаунта.
+#
+# Привязка делается один раз вручную (Cloudflare Dashboard):
+#   Workers & Pages → ai-orchestrator-api → Settings
+#   → Domains & Routes → Add → Custom Domain → api.ux42.studio
+# DNS-запись и SSL-сертификат Cloudflare создаст сам.
+#
+# ВАЖНО: адрес API не равен адресу сайта. Сайт живёт на
+# ai.orchestrator.ux42.studio (это Pages), API — на api.ux42.studio.
+# Один hostname на два продукта занять нельзя.
 
 # ── CORS ────────────────────────────────────────────────────────────────
 # Worker отвечает только перечисленным Origin (см. DEFAULT_ORIGINS в
-# worker/index.js). Чтобы переопределить без правки кода, раскомментируйте
-# [vars] ниже — список Origin через запятую. Нужно при смене домена или
-# для проверки конкретного preview-деплоя Pages (у каждого свой поддомен).
+# worker/index.js). Это Origin'ы САЙТА, а не адрес API.
+# Если не задан — берётся DEFAULT_ORIGINS.
+# Нужно при смене домена или для проверки конкретного preview-деплоя
+# Pages (у каждого свой поддомен).
 #
 # [vars]
 # ALLOWED_ORIGINS = "https://ai.orchestrator.ux42.studio,http://localhost:5173"
