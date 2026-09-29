@@ -11,6 +11,7 @@ import { Card } from '@/components/ui/card';
 import { api, streamReport } from '@/lib/api';
 import { deleteArtifact, getArtifact, saveArtifact, updateArtifact } from '@/lib/artifact-store';
 import { getWorkerUrl, loadCfg, loadDraft, saveCfg, saveDraft } from '@/lib/storage';
+import { noHanging } from '@/lib/typography';
 import { sleep } from '@/lib/utils';
 import { SAMPLE_RAW_INPUT, SAMPLE_REPORT, SAMPLE_LEARNING_DIGEST, SAMPLE_CASE_DRAFT } from '@/demo-data';
 import { MAX_INPUT_CHARS, PROVIDER_NAMES } from '@/types';
@@ -48,6 +49,8 @@ export function App() {
   // История артефактов (HANDOFF 04): id артефакта на экране + версия списка для перечитки
   const currentArtifactIdRef = useRef<string | null>(null);
   const [historyVersion, setHistoryVersion] = useState(0);
+  // Что именно дополняем кнопкой «Дополнить» (панель ввода): null → дополнять нечего
+  const [refineTarget, setRefineTarget] = useState<{ title: string; mode: Mode } | null>(null);
 
   const buildConfig = useCallback(
     (): UserConfig => ({
@@ -130,13 +133,15 @@ export function App() {
       } else if (targetMode === 'JIRA_SYNC') {
         setView({
           kind: 'error',
-          message:
+          message: noHanging(
             'Демо-режим: синхронизация с Jira недоступна. Чтобы включить — укажите Worker API URL и Jira-креды в ⚙️ Settings.',
+          ),
         });
         return;
       }
       // Демо-артефакт в историю не пишем (HANDOFF 04 §2.3.5)
       currentArtifactIdRef.current = null;
+      setRefineTarget(null);
       setLastReport(sample);
       setLastMode(demoMode);
       setView({ kind: 'report', markdown: sample, demo: true, mode: demoMode });
@@ -192,6 +197,7 @@ export function App() {
       void saveArtifact(targetMode, full).then((saved) => {
         if (runId !== runIdRef.current) return;
         currentArtifactIdRef.current = saved.id;
+        setRefineTarget({ title: saved.title, mode: targetMode });
         setHistoryVersion((v) => v + 1);
       });
       show(
@@ -211,7 +217,9 @@ export function App() {
           setLastReport(partial);
           setLastMode(targetMode);
           setView({ kind: 'report', markdown: partial, demo: false, mode: targetMode });
-          show('⏹ Остановлено — частичный результат сохранён');
+        show(
+          noHanging('⏹ Остановлено — частичный результат сохранён'),
+        );
         } else {
           setView({ kind: 'placeholder' });
           show('⏹ Остановлено');
@@ -299,14 +307,18 @@ export function App() {
     if (busy) return;
     const supplement = input.trim();
     if (!supplement) {
-      alert('Вставь в левую панель новый материал (куски чатов, заметки), которым хочешь дополнить артефакт');
+      alert(
+        noHanging('Вставь в левую панель новый материал (куски чатов, заметки), которым хочешь дополнить артефакт'),
+      );
       return;
     }
     if (!lastReport) return;
 
     const workerUrl = getWorkerUrl();
     if (!workerUrl || !session?.apiKey) {
-      alert('Для «Дополнить» нужен Worker API URL и API-ключ: в демо-режиме артефакт нельзя дополнить.');
+      alert(
+        noHanging('Для «Дополнить» нужен Worker API URL и API-ключ: в демо-режиме артефакт нельзя дополнить.'),
+      );
       return;
     }
 
@@ -339,14 +351,20 @@ export function App() {
       setView({ kind: 'report', markdown: updated, demo: false, mode: artifactMode });
 
       // Обновляем существующую запись истории; если её нет (или хранилище не отдало) — новая
+      let targetTitle = refineTarget?.title ?? '';
       if (currentArtifactIdRef.current) {
         const saved = await updateArtifact(currentArtifactIdRef.current, updated);
-        if (saved) currentArtifactIdRef.current = saved.id;
+        if (saved) {
+          currentArtifactIdRef.current = saved.id;
+          targetTitle = saved.title;
+        }
       }
       if (!currentArtifactIdRef.current) {
         const created = await saveArtifact(artifactMode, updated);
         currentArtifactIdRef.current = created.id;
+        targetTitle = created.title;
       }
+      setRefineTarget({ title: targetTitle, mode: artifactMode });
       setHistoryVersion((v) => v + 1);
       show('✓ Артефакт дополнен');
     } catch (err) {
@@ -367,6 +385,7 @@ export function App() {
       }
       // REFINE по открытому артефакту обновит именно эту запись истории
       currentArtifactIdRef.current = artifact.id;
+      setRefineTarget({ title: artifact.title, mode: artifact.mode });
       setLastReport(artifact.markdown);
       setLastMode(artifact.mode);
       setView({ kind: 'report', markdown: artifact.markdown, demo: false, mode: artifact.mode });
@@ -385,6 +404,7 @@ export function App() {
     abortRef.current = null;
     streamBufRef.current = '';
     currentArtifactIdRef.current = null; // историю не трогаем, только отвязываем артефакт
+    setRefineTarget(null);
     setInput('');
     setLastReport('');
     setView({ kind: 'placeholder' });
@@ -410,7 +430,9 @@ export function App() {
   const handleGuest = () => {
     saveCfg('guest', '1');
     setAuthOpen(false);
-    show('✓ Гостевой вход — демо-данные без ключей. Ключи можно добавить через «Демо-режим» → вход.');
+    show(
+      noHanging('✓ Гостевой вход — демо-данные без ключей. Ключи можно добавить через «Демо-режим» → вход.'),
+    );
   };
 
   const handleSaveJira = (jira: { jiraDomain: string; jiraEmail: string; jiraToken: string }) => {
@@ -510,6 +532,8 @@ export function App() {
             onDemo={handleDemo}
             onClear={handleClear}
             onRun={(m) => void sendRequest(m)}
+            onRefine={() => void handleRefine()}
+            refineTarget={refineTarget}
             busy={busy}
           />
         </Card>
@@ -521,10 +545,8 @@ export function App() {
             onDownload={handleDownload}
             onGoogleDocs={handleGoogleDocs}
             onStop={handleStop}
-            onRefine={() => void handleRefine()}
             onOpenArtifact={handleOpenArtifact}
             onDeleteArtifact={handleDeleteArtifact}
-            busy={busy}
             historyVersion={historyVersion}
           />
         </Card>

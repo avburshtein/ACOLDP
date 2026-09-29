@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { BookOpen, ChevronDown, CloudUpload, FileText, Palette, Play, Send, Trash2 } from 'lucide-react';
+import { BookOpen, ChevronDown, CloudUpload, FileText, Palette, PencilLine, Play, Send, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -18,6 +18,7 @@ import {
 } from '@/types';
 import type { Mode } from '@/types';
 import { cn } from '@/lib/utils';
+import { noHanging } from '@/lib/typography';
 
 const MODEL_SUGGESTIONS = [
   'gemini-2.0-flash',
@@ -36,6 +37,10 @@ interface InputPanelProps {
   onDemo: () => void;
   onClear: () => void;
   onRun: (mode: Mode) => void;
+  /** Дополнить открытый артефакт новым материалом (REFINE) */
+  onRefine: () => void;
+  /** Открытый артефакт: null — дополнять нечего (демо/пусто) */
+  refineTarget: { title: string; mode: Mode } | null;
   busy: boolean;
 }
 
@@ -49,6 +54,8 @@ export function InputPanel({
   onDemo,
   onClear,
   onRun,
+  onRefine,
+  refineTarget,
   busy,
 }: InputPanelProps) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -93,7 +100,7 @@ export function InputPanel({
   };
 
   return (
-    <section className="flex h-full flex-col gap-3 p-4">
+    <section className="flex h-full flex-col gap-4 p-4">
       <div className="flex min-h-8 items-center justify-between">
         <h2 className="text-title-sm font-semibold text-[var(--md-sys-color-on-surface)]">
           1. Входные данные
@@ -182,19 +189,39 @@ export function InputPanel({
       </Select>
 
       <p className="text-label-sm leading-snug text-[var(--md-sys-color-on-surface-variant)]">
-        {MODE_DESCRIPTIONS[mode]}
+        {noHanging(MODE_DESCRIPTIONS[mode])}
       </p>
       <p className="text-label-sm leading-snug text-[var(--md-sys-color-on-surface-variant)]">
         <span className="text-[var(--md-sys-color-on-surface)]">Рекомендации по LLM:</span>{' '}
-        {MODE_MODEL_HINTS[mode]}
+        {noHanging(MODE_MODEL_HINTS[mode])}
       </p>
 
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={modePlaceholder[mode]}
+        placeholder={
+          refineTarget
+            ? noHanging(
+                `Здесь можно дописать артефакт: вставь новый материал (куски чатов, заметки, метрики) и нажми «Дополнить».\n\nДополняем: ${MODE_LABELS[refineTarget.mode]} «${refineTarget.title}»`,
+              )
+            : noHanging(modePlaceholder[mode])
+        }
         className="custom-scrollbar field-surface min-h-0 flex-1 resize-none rounded-md p-3.5 font-sans text-body-md leading-relaxed text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] focus-visible:outline-none"
       />
+
+      {/* Подсказка REFINE: что именно дополняем и что делать дальше */}
+      {refineTarget && (
+        <div className="rounded-md border border-dashed border-[var(--md-sys-color-outline-variant)] p-3">
+          <p className="text-label-md font-semibold text-[var(--md-sys-color-on-surface)]">
+            Дополняем: {MODE_LABELS[refineTarget.mode]} «{refineTarget.title}»
+          </p>
+          <p className="mt-1 text-label-sm text-[var(--md-sys-color-on-surface-variant)]">
+            {noHanging(
+              'Вставь в поле выше новый материал и нажми «Дополнить» — артефакт обновится целиком, запись в истории не задублируется.',
+            )}
+          </p>
+        </div>
+      )}
 
       {/* Drop zone — пунктирный вариант .field-surface (Design-System §3) */}
       <div
@@ -223,8 +250,8 @@ export function InputPanel({
       >
         <CloudUpload className="h-4 w-4" />
         <span>
-          Перетащите файл или{' '}
-          <span className="underline">выберите</span>
+          {noHanging('Перетащите файл или ')}
+          <span className="underline">выберите здесь</span>
         </span>
         <input
           ref={fileRef}
@@ -253,8 +280,9 @@ export function InputPanel({
       </div>
       {value.length > TIMEOUT_WARN_CHARS && !overLimit && (
         <p className="px-1 text-xs text-amber-600 dark:text-amber-400">
-          ⚠ Большой вход ({TIMEOUT_WARN_CHARS.toLocaleString('ru-RU')} симв.) — генерация займёт
-          больше времени, но ответ появится постепенно по мере готовности.
+          {noHanging(
+            `⚠ Большой вход (${TIMEOUT_WARN_CHARS.toLocaleString('ru-RU')} симв.) — генерация займёт больше времени, но ответ появится постепенно по мере готовности.`,
+          )}
         </p>
       )}
 
@@ -272,6 +300,15 @@ export function InputPanel({
         <div className="flex-1" />
         <Button variant="default" size="sm" onClick={() => onRun(mode)} disabled={busy}>
           <RunIcon className="h-4 w-4" /> {MODE_ACTION_LABEL[mode]}
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onRefine}
+          disabled={!refineTarget || busy}
+          title="Дополнить открытый артефакт новым материалом"
+        >
+          <PencilLine className="h-4 w-4" /> Дополнить
         </Button>
       </div>
     </section>

@@ -104,6 +104,7 @@
     --md-sys-color-on-surface: #ffffff;
     --md-sys-color-surface-variant: #1a1a1a;
     --md-sys-color-on-surface-variant: #aaaaaa;
+    --md-sys-color-field-surface: #101010;
     --md-sys-color-outline: #ffffff;
     --md-sys-color-outline-variant: #333333;
     --md-sys-color-primary: #ffffff;
@@ -144,13 +145,14 @@
 @layer components {
   /* ── Поля ввода: field-surface ──
      Единый стиль ПЛОСКИХ контролов (textarea, input, триггер Select).
-     Покой: серый фон surface-variant + серый бордер outline-variant.
+     Покой: бледная подложка field-surface (намёк на тон, тише surface-variant)
+     + серый бордер outline-variant.
      Актив (hover / focus / открытый select): бордер подсвечивается токеном
      outline-active — линия из glass-палитры, БЕЗ теней, заливки и перелива.
      ВАЖНО: фокус-подсветка только бордером, ring не используем. */
   .field-surface {
     border: 1px solid var(--md-sys-color-outline-variant);
-    background-color: var(--md-sys-color-surface-variant);
+    background-color: var(--md-sys-color-field-surface);
     transition: border-color .16s ease;
   }
   .field-surface:hover,
@@ -176,13 +178,17 @@
     border-color: var(--md-sys-color-outline-active);
   }
   .field-surface-dashed[data-dragover] {
-    background-color: var(--md-sys-color-surface-variant);
+    background-color: var(--md-sys-color-field-surface);
   }
 
-  .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+  .custom-scrollbar::-webkit-scrollbar { width: 10px; }
   .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
   .custom-scrollbar::-webkit-scrollbar-thumb {
     @apply bg-[var(--md-sys-color-outline-variant)] rounded;
+    /* Ползунок утоплен: прозрачная рамка отодвигает видимую часть (4px)
+       от края контейнера, чтобы она не наезжала на скругление углов */
+    border: 3px solid transparent;
+    background-clip: padding-box;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     @apply bg-[var(--md-sys-color-on-surface-variant)];

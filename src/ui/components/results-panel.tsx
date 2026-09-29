@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Copy, Download, ExternalLink, FileText, History, PencilLine, Sparkles, Square, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ArrowUp, CircleAlert, Copy, Download, ExternalLink, FileText, History, MessageSquare, Plus, Sparkles, Square } from 'lucide-react';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { JiraResult, Mode, SyncStats } from '@/types';
 import { MODE_LABELS } from '@/types';
 import { cn } from '@/lib/utils';
 import { parseCaseCompleteness } from '@/lib/parse-case-completeness';
 import { listArtifacts, type Artifact } from '@/lib/artifact-store';
+import { noHanging } from '@/lib/typography';
 
 export type ResultsView =
   | { kind: 'placeholder' }
@@ -25,10 +26,8 @@ interface ResultsPanelProps {
   onDownload: () => void;
   onGoogleDocs: () => void;
   onStop: () => void;
-  onRefine: () => void;
   onOpenArtifact: (id: string) => void;
   onDeleteArtifact: (id: string) => void;
-  busy: boolean;
   historyVersion: number;
 }
 
@@ -86,8 +85,15 @@ function artifactPreview(markdown: string): string {
 const cardCls =
   'rounded-md border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface)] p-4';
 
-const linkCls =
-  'shrink-0 text-label-md underline underline-offset-4 text-[var(--md-sys-color-primary)] hover:opacity-80';
+/** Таб-пилюля заполняет трек целиком: активная — стеклянное secondary-стекло, неактивная — просто текст */
+function pillCls(isActive: boolean): string {
+  return cn(
+    'inline-flex h-9 items-center rounded-full px-4 text-label-md font-medium transition-all',
+    isActive
+      ? 'glass glass-shadow'
+      : 'text-[var(--md-sys-color-on-surface-variant)] hover:text-[var(--md-sys-color-on-surface)]',
+  );
+}
 
 export function ResultsPanel({
   view,
@@ -96,10 +102,8 @@ export function ResultsPanel({
   onDownload,
   onGoogleDocs,
   onStop,
-  onRefine,
   onOpenArtifact,
   onDeleteArtifact,
-  busy,
   historyVersion,
 }: ResultsPanelProps) {
   const [tab, setTab] = useState<ResultTab>('result');
@@ -120,23 +124,29 @@ export function ResultsPanel({
   }, [view]);
 
   return (
-    <section className="flex h-full flex-col gap-3 p-4">
+    <section className="flex h-full flex-col gap-4 p-4">
       <Tabs
         value={tab}
         onValueChange={(v) => setTab(v as ResultTab)}
-        className="flex min-h-0 flex-1 flex-col gap-3"
+        className="flex min-h-0 flex-1 flex-col gap-4"
       >
       <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-3">
           <h2 className="text-title-sm font-semibold text-[var(--md-sys-color-on-surface)]">
             2. Результаты
           </h2>
-          <TabsList className="h-9">
-            <TabsTrigger value="result" className="h-7 px-2.5">
-              Результат
+          <TabsList className="h-9 gap-0 rounded-full border-0 bg-[var(--md-sys-color-field-surface)] p-0">
+            <TabsTrigger
+              value="result"
+              className="h-9 rounded-full border-0 bg-transparent p-0 text-[var(--md-sys-color-on-surface-variant)] shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            >
+              <span className={pillCls(tab === 'result')}>Результат</span>
             </TabsTrigger>
-            <TabsTrigger value="history" className="h-7 px-2.5">
-              История
+            <TabsTrigger
+              value="history"
+              className="h-9 rounded-full border-0 bg-transparent p-0 text-[var(--md-sys-color-on-surface-variant)] shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+            >
+              <span className={pillCls(tab === 'history')}>История</span>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -145,15 +155,6 @@ export function ResultsPanel({
             <span className="text-label-sm text-[var(--md-sys-color-on-surface-variant)] mr-1">
               {MODE_LABELS[view.mode]}
             </span>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={onRefine}
-              disabled={view.demo || busy}
-              title="Дополнить артефакт материалом из левой панели"
-            >
-              <PencilLine className="h-3.5 w-3.5 mr-1" /> Дополнить
-            </Button>
             {view.mode === 'REPORT' && (
               <Button
                 variant="default"
@@ -164,13 +165,34 @@ export function ResultsPanel({
                 <FileText className="h-3.5 w-3.5 mr-1" /> В тикеты
               </Button>
             )}
-            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={onGoogleDocs} title="Открыть в Google Docs">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              onClick={onGoogleDocs}
+              aria-label="Открыть в Google Docs"
+              title="Открыть в Google Docs"
+            >
               <ExternalLink className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={onCopy} title="Копировать">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              onClick={onCopy}
+              aria-label="Копировать результат"
+              title="Копировать результат"
+            >
               <Copy className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={onDownload} title="Скачать .md">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              onClick={onDownload}
+              aria-label="Скачать .md"
+              title="Скачать .md"
+            >
               <Download className="h-4 w-4" />
             </Button>
           </div>
@@ -233,7 +255,7 @@ export function ResultsPanel({
         )}
 
         {view.kind === 'report' && (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <DemoBanner demo={view.demo} />
             {view.mode === 'CASE_DRAFT' && (
               <CompletenessBanner markdown={view.markdown} />
@@ -250,7 +272,7 @@ export function ResultsPanel({
         )}
 
         {view.kind === 'streaming' && (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {view.mode === 'CASE_DRAFT' && (
               <CompletenessBanner markdown={view.markdown} />
             )}
@@ -264,7 +286,7 @@ export function ResultsPanel({
         )}
 
         {view.kind === 'sync' && (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <DemoBanner demo={view.demo} />
             {view.stats && <StatsBar stats={view.stats} />}
             {view.results.map((r, i) => (
@@ -284,15 +306,15 @@ export function ResultsPanel({
             <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-[var(--md-sys-color-on-surface-variant)]">
               <History className="h-10 w-10" aria-hidden />
               <p className="text-body-md">
-                Пока пусто — сгенерированные отчёты, дайджесты и кейсы появятся здесь
+                {noHanging('Пока пусто — сгенерированные отчёты, дайджесты и кейсы появятся здесь')}
               </p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {artifacts.map((a) => (
-                <div key={a.id} className={cn(cardCls, 'flex items-start justify-between gap-3')}>
+                <div key={a.id} className={cn(cardCls, 'flex items-center justify-between gap-3')}>
                   <div className="min-w-0">
-                    <p className="truncate text-label-md font-semibold text-[var(--md-sys-color-on-surface)]">
+                    <p className="truncate text-label-md font-semibold tracking-wide text-[var(--md-sys-color-on-surface)]">
                       {MODE_EMOJI[a.mode] ?? '📄'} {a.title}
                     </p>
                     <p className="mt-0.5 text-label-sm text-[var(--md-sys-color-on-surface-variant)]">
@@ -303,19 +325,23 @@ export function ResultsPanel({
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    <Button variant="secondary" size="sm" onClick={() => onOpenArtifact(a.id)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onOpenArtifact(a.id)}
+                      title="Открыть артефакт в панели результата"
+                    >
                       Открыть
                     </Button>
                     <Button
                       variant="ghost"
-                      size="icon"
-                      aria-label="Удалить артефакт"
-                      title="Удалить артефакт"
+                      size="sm"
                       onClick={() => {
                         if (confirm('Удалить артефакт?')) onDeleteArtifact(a.id);
                       }}
+                      title="Удалить артефакт из истории"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      Удалить
                     </Button>
                   </div>
                 </div>
@@ -358,7 +384,7 @@ function CompletenessBanner({ markdown }: { markdown: string }) {
       </p>
       {info.needsDesigner && (
         <p className="mt-1 text-body-sm text-[var(--md-sys-color-on-surface-variant)]">
-          Ещё нужно: {info.needsDesigner}
+          {noHanging(`Ещё нужно: ${info.needsDesigner}`)}
         </p>
       )}
     </div>
@@ -371,8 +397,9 @@ function DemoBanner({ demo }: { demo: boolean }) {
     <div className={cn(cardCls, 'border-dashed')}>
       <p className="text-label-md font-semibold">ℹ️ Демо-режим</p>
       <p className="mt-1 text-body-sm text-[var(--md-sys-color-on-surface-variant)]">
-        Показан предзаготовленный результат. Для реальной генерации укажите Worker
-        API URL и ключи в ⚙️ Settings.
+        {noHanging(
+          'Показан предзаготовленный результат. Для реальной генерации укажите Worker API URL и ключи в ⚙️ Settings.',
+        )}
       </p>
     </div>
   );
@@ -390,8 +417,8 @@ function StatsBar({ stats }: { stats: SyncStats }) {
     <div className="grid grid-cols-4 gap-2 rounded-md border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-variant)] p-3">
       {STAT_ITEMS.map(({ key, label }) => (
         <div key={key} className="text-center">
-          <div className="text-xl font-bold">{stats[key]}</div>
-          <div className="text-[10px] uppercase tracking-wide text-[var(--md-sys-color-on-surface-variant)]">
+          <div className="text-title-lg">{stats[key]}</div>
+          <div className="text-label-sm uppercase tracking-wide text-[var(--md-sys-color-on-surface-variant)]">
             {label}
           </div>
         </div>
@@ -400,11 +427,20 @@ function StatsBar({ stats }: { stats: SyncStats }) {
   );
 }
 
+/** Иконки статусов Jira-тикетов (Lucide, монохромные — вместо эмодзи) */
+const STATUS_ICONS = {
+  created: Plus,
+  updated: ArrowUp,
+  commented: MessageSquare,
+} as const;
+
 function ResultCard({ result: r }: { result: JiraResult }) {
   if (r.status === 'error') {
     return (
       <div className={cn(cardCls, 'border-red-400/40')}>
-        <p className="text-label-md font-semibold text-red-400">❌ Ошибка</p>
+        <p className="flex items-center gap-2 text-label-md font-semibold tracking-wide text-red-400">
+          <CircleAlert className="h-4 w-4" aria-hidden /> Ошибка
+        </p>
         <p className="mt-1 break-all font-mono text-body-sm text-[var(--md-sys-color-on-surface-variant)]">
           {typeof r.error === 'string' ? r.error : JSON.stringify(r.error)}
         </p>
@@ -412,7 +448,7 @@ function ResultCard({ result: r }: { result: JiraResult }) {
     );
   }
 
-  const icons = { created: '🆕', updated: '⬆️', commented: '💬' } as const;
+  const Icon = STATUS_ICONS[r.status];
   const titles: Record<string, string> = {
     created: `${r.jira_key} · ${r.issue_type ?? 'Task'}${r.priority ? ` · ${r.priority}` : ''}`,
     updated: `${r.jira_key} · Приоритет повышен`,
@@ -420,10 +456,11 @@ function ResultCard({ result: r }: { result: JiraResult }) {
   };
 
   return (
-    <div className={cn(cardCls, 'flex items-start justify-between gap-3')}>
+    <div className={cn(cardCls, 'flex items-center justify-between gap-3')}>
       <div className="min-w-0">
-        <p className="text-label-md font-semibold">
-          {icons[r.status]} {titles[r.status]}
+        <p className="flex items-center gap-2 text-label-md font-semibold tracking-wide">
+          <Icon className="h-4 w-4 shrink-0 text-[var(--md-sys-color-on-surface-variant)]" aria-hidden />
+          {titles[r.status]}
         </p>
         {r.status === 'created' && r.summary && (
           <p className="mt-1 truncate text-body-sm text-[var(--md-sys-color-on-surface-variant)]">
@@ -445,8 +482,16 @@ function ResultCard({ result: r }: { result: JiraResult }) {
         )}
       </div>
       {r.jira_url && (
-        <a href={r.jira_url} target="_blank" rel="noreferrer" className={linkCls}>
-          Открыть →
+        <a
+          href={r.jira_url}
+          target="_blank"
+          rel="noreferrer"
+          className={cn(
+            buttonVariants({ variant: 'ghost', size: 'sm' }),
+            'shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--md-sys-color-primary)] focus-visible:ring-offset-2',
+          )}
+        >
+          Открыть
         </a>
       )}
     </div>

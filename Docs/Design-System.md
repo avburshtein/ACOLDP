@@ -23,7 +23,8 @@
 - Переключение — атрибут `data-theme="light|dark"` на `<html>`, выбор в localStorage.
 - Tailwind dark-вариант настроен через `@custom-variant dark` в `base.css` —
   классы `dark:*` реагируют на `data-theme`, а не на системную тему ОС.
-- Ключевые токены: `background`, `surface`, `surface-variant`, `on-surface`,
+- Ключевые токены: `background`, `surface`, `surface-variant`, **`field-surface`**
+  (бледная подложка полей), `on-surface`,
   `on-surface-variant`, `outline`, `outline-variant`, **`outline-active`**,
   `primary` / `on-primary`, `secondary-container`, `error`.
 
@@ -49,7 +50,7 @@
 | Вариант | Класс | Назначение |
 |---------|-------|------------|
 | `default` | `glass-accent` | Главный CTA («Отчёт», «Войти») — тёмное дымчатое стекло |
-| `secondary` | — | Нейтральное действие («В Jira», «Гостевой вход», «Демо») |
+| `secondary` | — | Нейтральное действие («Дополнить», «Гостевой вход», «Демо») |
 | `ghost` | `glass-ghost` | Служебные/иконочные кнопки — приглушённые (55–70%) |
 | `destructive` | `ghost` + `data-destructive` | **Единственная кнопка с особым hover-цветом** — румяная кромка и гало («Очистить») |
 
@@ -68,14 +69,18 @@ hover допустим только у destructive. Иконки Lucide — мо
 ## 3. Поля ввода — `.field-surface` (ПЛОСКИЕ, не стекло!)
 
 **Правило:** все поля (textarea, input, триггер Select) — плоские контролы на
-серой подложке. Стекло — только для кнопок. Смешивать нельзя.
+бледной серой подложке. Стекло — только для кнопок. Смешивать нельзя.
 
 | Состояние | Фон | Бордер |
 |-----------|-----|--------|
-| Покой | `surface-variant` | `outline-variant` (серый) |
-| Hover | `surface-variant` | `outline-active` |
-| Focus / Focus-visible | `surface-variant` | `outline-active` |
-| Select открыт (`[data-state='open']`) | `surface-variant` | `outline-active` |
+| Покой | `field-surface` | `outline-variant` (серый) |
+| Hover | `field-surface` | `outline-active` |
+| Focus / Focus-visible | `field-surface` | `outline-active` |
+| Select открыт (`[data-state='open']`) | `field-surface` | `outline-active` |
+
+- Токен `field-surface` — **бледнее** `surface-variant` (light `#fafafa`, dark `#101010`):
+  подложка полей должна читаться как намёк на тон, а не как отдельный серый цвет.
+  Значения — в `theme.css`; в `.field-surface` подставляется только переменная.
 
 - Реализация: класс `.field-surface` в `base.css` (@layer components).
 - Базовые компоненты уже включают его: `ui/Input`, `ui/Textarea`, `ui/SelectTrigger`.
@@ -86,7 +91,7 @@ hover допустим только у destructive. Иконки Lucide — мо
   `field-surface` (utilities-слой старше components), бордер наследуется.
 - **Drop-zone** — пунктирный вариант того же паттерна: класс `.field-surface-dashed`
   (покой — серый пунктир без заливки; hover/focus — бордер `outline-active`;
-  drag-over — бордер `outline-active` + заливка `surface-variant`). Активация
+  drag-over — бордер `outline-active` + заливка `field-surface`). Активация
   через `data-dragover={dragOver || undefined}`; зона доступна с клавиатуры
   (`tabIndex` + `role="button"` + Enter/Space).
 
@@ -128,5 +133,7 @@ hover допустим только у destructive. Иконки Lucide — мо
 - Шапка: заголовок + бейдж режима сессии (провайдер / «Демо-режим»-кнопка) + theme-toggle + настройки.
 - Сетка: две карточки `lg:grid-cols-2` — вход (слева) и результат (справа).
 - Вход: заголовок секции + Демо + поле модели → Select режима → описание режима →
-  подсказка модели (`Cpu`) → textarea → drop-zone → счётчик (+ предупреждение >30k) →
-  кнопки: Очистить (destructive-ghost) | spacer | CTA режима | В Jira (secondary).
+  подсказка модели (plain text) → textarea → подсказка REFINE (если открыт артефакт) →
+  drop-zone → счётчик (+ предупреждение >30k) →
+  кнопки: Очистить (destructive-ghost) | spacer | CTA режима | Дополнить (secondary, REFINE —
+  disabled, пока не открыт артефакт).
