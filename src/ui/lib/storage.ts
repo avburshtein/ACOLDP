@@ -24,8 +24,13 @@ export function saveCfg(key: CfgKey, value: string): void {
   }
 }
 
+/** Воркер деплоится один раз, адрес публичный (CORS *) — дефолт зашит здесь,
+ *  чтобы поле Worker API URL не показывалось в Settings никому.
+ *  Если адрес изменится (переезд воркера) — правится ТОЛЬКО эта константа. */
+export const DEFAULT_WORKER_URL = 'https://ai-orchestrator-api.av-burshtein.workers.dev';
+
 export function getWorkerUrl(): string {
-  return loadCfg('worker-url');
+  return loadCfg('worker-url') || DEFAULT_WORKER_URL;
 }
 
 const DRAFT_KEY = 'acoldp_draft';

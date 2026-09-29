@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowUp, CircleAlert, Copy, Download, ExternalLink, FileText, History, MessageSquare, Plus, Sparkles, Square } from 'lucide-react';
+import { ArrowUp, BookOpen, CircleAlert, Copy, Download, ExternalLink, FileText, History, Info, MessageSquare, Palette, Plus, Sparkles, Square, Trash2 } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { JiraResult, Mode, SyncStats } from '@/types';
@@ -46,18 +46,23 @@ function formatTime(totalSec: number): string {
 
 /** Заголовок карточки результата зависит от режима генерации */
 function resultTitle(mode: Mode): string {
-  if (mode === 'REPORT') return '📋 Отчёт';
-  if (mode === 'LEARNING_DIGEST') return '📚 Дайджест';
-  if (mode === 'CASE_DRAFT') return '🎨 Кейс UX42';
+  if (mode === 'REPORT') return 'Отчёт';
+  if (mode === 'LEARNING_DIGEST') return 'Дайджест';
+  if (mode === 'CASE_DRAFT') return 'Кейс UX42';
   return MODE_LABELS[mode] ?? mode;
 }
 
-/** Эмодзи режима для карточек истории (контент текста карточки, не иконка кнопки) */
-const MODE_EMOJI: Record<string, string> = {
-  REPORT: '📋',
-  LEARNING_DIGEST: '📚',
-  CASE_DRAFT: '🎨',
+/** Иконки режимов для карточек истории (Lucide, монохромные — вместо эмодзи) */
+const MODE_ARTIFACT_ICONS: Record<string, React.ElementType> = {
+  REPORT: FileText,
+  LEARNING_DIGEST: BookOpen,
+  CASE_DRAFT: Palette,
 };
+
+/** Действия карточек (история, Jira): заметнее on-surface-variant, но не чёрные (§5) */
+const cardActionCls =
+  'text-[var(--md-sys-color-on-surface)]/80 hover:text-[var(--md-sys-color-on-surface)]';
+const cardActionIconCls = '[&_svg]:text-[var(--md-sys-color-on-surface)]/80';
 
 /** Дата артефакта: «сегодня 14:32», «вчера», иначе DD.MM.YYYY */
 function formatArtifactDate(ts: number): string {
@@ -131,94 +136,94 @@ export function ResultsPanel({
         className="flex min-h-0 flex-1 flex-col gap-4"
       >
       <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-3">
-          <h2 className="text-title-sm font-semibold text-[var(--md-sys-color-on-surface)]">
-            2. Результаты
-          </h2>
-          <TabsList className="h-9 gap-0 rounded-full border-0 bg-[var(--md-sys-color-field-surface)] p-0">
-            <TabsTrigger
-              value="result"
-              className="h-9 rounded-full border-0 bg-transparent p-0 text-[var(--md-sys-color-on-surface-variant)] shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-            >
-              <span className={pillCls(tab === 'result')}>Результат</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="history"
-              className="h-9 rounded-full border-0 bg-transparent p-0 text-[var(--md-sys-color-on-surface-variant)] shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-            >
-              <span className={pillCls(tab === 'history')}>История</span>
-            </TabsTrigger>
-          </TabsList>
-        </div>
-        {view.kind === 'report' && (
-          <div className="flex items-center gap-2">
-            <span className="text-label-sm text-[var(--md-sys-color-on-surface-variant)] mr-1">
-              {MODE_LABELS[view.mode]}
-            </span>
-            {view.mode === 'REPORT' && (
-              <Button
-                variant="default"
-                size="sm"
-                onClick={onConvert}
-                title="Отправить результат в Jira как входные данные"
-              >
-                <FileText className="h-3.5 w-3.5 mr-1" /> В тикеты
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9"
-              onClick={onGoogleDocs}
-              aria-label="Открыть в Google Docs"
-              title="Открыть в Google Docs"
-            >
-              <ExternalLink className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9"
-              onClick={onCopy}
-              aria-label="Копировать результат"
-              title="Копировать результат"
-            >
-              <Copy className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9"
-              onClick={onDownload}
-              aria-label="Скачать .md"
-              title="Скачать .md"
-            >
-              <Download className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-        {view.kind === 'streaming' && (
-          <div className="flex items-center gap-2">
-            <span className="text-label-sm text-[var(--md-sys-color-on-surface-variant)] mr-1">
-              {MODE_LABELS[view.mode]}
-            </span>
-            <span className="text-label-sm text-[var(--md-sys-color-on-surface-variant)]">
-              Генерация…
-            </span>
-            <span className="w-10 text-right font-mono text-label-sm text-[var(--md-sys-color-on-surface)]">
-              {formatTime(view.seconds)}
-            </span>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={onStop}
-              title="Остановить и сохранить часть"
-            >
-              <Square className="h-3.5 w-3.5 mr-1" /> Stop
-            </Button>
-          </div>
-        )}
+        <h2 className="text-title-sm font-semibold text-[var(--md-sys-color-on-surface)]">
+          2. Результаты
+        </h2>
+        <TabsList className="h-9 gap-0 rounded-full border-0 bg-[var(--md-sys-color-field-surface)] p-0">
+          <TabsTrigger
+            value="result"
+            className="h-9 rounded-full border-0 bg-transparent p-0 text-[var(--md-sys-color-on-surface-variant)] shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+          >
+            <span className={pillCls(tab === 'result')}>Результат</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="history"
+            className="h-9 rounded-full border-0 bg-transparent p-0 text-[var(--md-sys-color-on-surface-variant)] shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+          >
+            <span className={pillCls(tab === 'history')}>История</span>
+          </TabsTrigger>
+        </TabsList>
       </div>
+
+      {/* Действия — вторым рядом: на уровне селектора режимов левой панели */}
+      {(view.kind === 'report' || view.kind === 'streaming') && (
+        <div className="flex flex-wrap items-center gap-2">
+          {view.kind === 'streaming' ? (
+            <>
+              <span className="text-label-sm text-[var(--md-sys-color-on-surface-variant)]">
+                Генерация…
+              </span>
+              <span className="w-10 text-right font-mono text-label-sm text-[var(--md-sys-color-on-surface)]">
+                {formatTime(view.seconds)}
+              </span>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onStop}
+                title="Остановить и сохранить часть"
+              >
+                <Square className="h-3.5 w-3.5 mr-1" /> Stop
+              </Button>
+            </>
+          ) : (
+            <>
+              <span className="text-label-sm text-[var(--md-sys-color-on-surface-variant)] mr-1">
+                {MODE_LABELS[view.mode]}
+              </span>
+              {view.mode === 'REPORT' && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={onConvert}
+                  title="Отправить результат в Jira как входные данные"
+                >
+                  <FileText className="h-3.5 w-3.5 mr-1" /> В тикеты
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9"
+                onClick={onGoogleDocs}
+                aria-label="Открыть в Google Docs"
+                title="Открыть в Google Docs"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9"
+                onClick={onCopy}
+                aria-label="Копировать результат"
+                title="Копировать результат"
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9"
+                onClick={onDownload}
+                aria-label="Скачать .md"
+                title="Скачать .md"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+        </div>
+      )}
 
       <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto pr-1">
         <TabsContent value="result" className="mt-0 h-full">
@@ -247,7 +252,9 @@ export function ResultsPanel({
 
         {view.kind === 'error' && (
           <div className={cn(cardCls, 'border-red-400/40')}>
-            <p className="mb-1 text-label-md font-semibold text-red-400">❌ Ошибка</p>
+            <p className="mb-1 flex items-center gap-2 text-label-md font-semibold tracking-wide text-red-400">
+              <CircleAlert className="h-4 w-4" aria-hidden /> Ошибка
+            </p>
             <p className="whitespace-pre-wrap break-words text-body-sm text-[var(--md-sys-color-on-surface-variant)]">
               {view.message}
             </p>
@@ -314,8 +321,14 @@ export function ResultsPanel({
               {artifacts.map((a) => (
                 <div key={a.id} className={cn(cardCls, 'flex items-center justify-between gap-3')}>
                   <div className="min-w-0">
-                    <p className="truncate text-label-md font-semibold tracking-wide text-[var(--md-sys-color-on-surface)]">
-                      {MODE_EMOJI[a.mode] ?? '📄'} {a.title}
+                    <p className="flex items-center gap-2 truncate text-label-md font-semibold tracking-wide text-[var(--md-sys-color-on-surface)]">
+                      {(() => {
+                        const Icon = MODE_ARTIFACT_ICONS[a.mode];
+                        return Icon ? (
+                          <Icon className="h-4 w-4 shrink-0 text-[var(--md-sys-color-on-surface-variant)]" aria-hidden />
+                        ) : null;
+                      })()}
+                      {a.title}
                     </p>
                     <p className="mt-0.5 text-label-sm text-[var(--md-sys-color-on-surface-variant)]">
                       {formatArtifactDate(a.updatedAt)}
@@ -328,6 +341,7 @@ export function ResultsPanel({
                     <Button
                       variant="ghost"
                       size="sm"
+                      className={cardActionCls}
                       onClick={() => onOpenArtifact(a.id)}
                       title="Открыть артефакт в панели результата"
                     >
@@ -335,13 +349,15 @@ export function ResultsPanel({
                     </Button>
                     <Button
                       variant="ghost"
-                      size="sm"
+                      size="icon"
+                      className={cn('h-9 w-9', cardActionCls, cardActionIconCls)}
+                      aria-label="Удалить артефакт"
+                      title="Удалить артефакт из истории"
                       onClick={() => {
                         if (confirm('Удалить артефакт?')) onDeleteArtifact(a.id);
                       }}
-                      title="Удалить артефакт из истории"
                     >
-                      Удалить
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -395,10 +411,12 @@ function DemoBanner({ demo }: { demo: boolean }) {
   if (!demo) return null;
   return (
     <div className={cn(cardCls, 'border-dashed')}>
-      <p className="text-label-md font-semibold">ℹ️ Демо-режим</p>
+      <p className="flex items-center gap-2 text-label-md font-semibold">
+        <Info className="h-4 w-4" aria-hidden /> Демо-режим
+      </p>
       <p className="mt-1 text-body-sm text-[var(--md-sys-color-on-surface-variant)]">
         {noHanging(
-          'Показан предзаготовленный результат. Для реальной генерации укажите Worker API URL и ключи в ⚙️ Settings.',
+          'Показан предзаготовленный результат. Для реальной генерации укажите ключи на экране входа или в Settings.',
         )}
       </p>
     </div>
@@ -488,6 +506,7 @@ function ResultCard({ result: r }: { result: JiraResult }) {
           rel="noreferrer"
           className={cn(
             buttonVariants({ variant: 'ghost', size: 'sm' }),
+            cardActionCls,
             'shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--md-sys-color-primary)] focus-visible:ring-offset-2',
           )}
         >

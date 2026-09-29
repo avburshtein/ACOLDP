@@ -23,7 +23,7 @@ export function App() {
   const [provider, setProvider] = useState(() => loadCfg('provider'));
   // Оверлей входа: показываем при первом заходе, пока пользователь не
   // выбрал гостевой режим (guest-флаг). Worker URL не обязателен заранее —
-  // его можно ввести в ⚙️ Settings или после входа с ключом.
+  // его можно ввести в Settings или после входа с ключом.
   const [authOpen, setAuthOpen] = useState(() => !loadCfg('guest'));
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [input, setInput] = useState(() => loadDraft());
@@ -134,7 +134,7 @@ export function App() {
         setView({
           kind: 'error',
           message: noHanging(
-            'Демо-режим: синхронизация с Jira недоступна. Чтобы включить — укажите Worker API URL и Jira-креды в ⚙️ Settings.',
+            'Демо-режим: синхронизация с Jira недоступна. Чтобы включить — укажите Jira-креды в Settings.',
           ),
         });
         return;
@@ -217,12 +217,10 @@ export function App() {
           setLastReport(partial);
           setLastMode(targetMode);
           setView({ kind: 'report', markdown: partial, demo: false, mode: targetMode });
-        show(
-          noHanging('⏹ Остановлено — частичный результат сохранён'),
-        );
+        show(noHanging('Остановлено — частичный результат сохранён'));
         } else {
           setView({ kind: 'placeholder' });
-          show('⏹ Остановлено');
+          show('Остановлено');
         }
         return;
       }

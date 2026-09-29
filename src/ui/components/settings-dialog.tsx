@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { api } from '@/lib/api';
-import { loadCfg, saveCfg, type CfgKey } from '@/lib/storage';
+import { loadCfg, saveCfg, getWorkerUrl, type CfgKey } from '@/lib/storage';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -40,7 +40,6 @@ export function SettingsDialog({
   onSaveJira,
 }: SettingsDialogProps) {
   const [baseUrl, setBaseUrl] = useState('');
-  const [workerUrl, setWorkerUrl] = useState('');
   const [project, setProject] = useState('');
   const [projects, setProjects] = useState<JiraProject[]>([]);
   const [jiraDomain, setJiraDomain] = useState('');
@@ -53,7 +52,6 @@ export function SettingsDialog({
   useEffect(() => {
     if (!open) return;
     setBaseUrl(loadCfg('base-url'));
-    setWorkerUrl(loadCfg('worker-url'));
     setProject(loadCfg('jira-project') || NONE);
     const cfg = getConfig();
     setJiraDomain(cfg.jira_domain);
@@ -65,11 +63,6 @@ export function SettingsDialog({
   }, [open]);
 
   const loadProjects = async () => {
-    const url = workerUrl.trim();
-    if (!url) {
-      showStatus('Укажите Worker API URL');
-      return;
-    }
     const cfg = getConfig();
     if (!cfg.jira_domain || !cfg.jira_email || !cfg.jira_token) {
       showStatus('Заполните Jira Domain / Email / Token в настройках');
@@ -78,7 +71,7 @@ export function SettingsDialog({
     setLoading(true);
     setLoadError('');
     try {
-      const data = await api.jiraProjects(url, cfg);
+      const data = await api.jiraProjects(getWorkerUrl(), cfg);
       setProjects(data.projects ?? []);
       showStatus(
         data.projects?.length
@@ -97,7 +90,9 @@ export function SettingsDialog({
   const save = () => {
     const values: Record<CfgKey, string> = {
       'base-url': baseUrl.trim(),
-      'worker-url': workerUrl.trim(),
+      // Worker API URL в Settings не редактируется: адрес берётся из
+      // getWorkerUrl() (дефолт — DEFAULT_WORKER_URL в storage.ts)
+      'worker-url': loadCfg('worker-url'),
       'jira-project': project === NONE ? '' : project,
       provider: loadCfg('provider'), // provider меняется только на auth-экране
       mode: loadCfg('mode') || 'REPORT',
@@ -122,37 +117,30 @@ export function SettingsDialog({
         <DialogHeader>
           <DialogTitle>Настройки</DialogTitle>
           <DialogDescription>
-            Служебные адреса и Jira-креды. Провайдер и API-ключ — на экране
-            входа; Jira нужна только для кнопки «В Jira».
+            Jira-креды для кнопки «В тикеты». Провайдер и API-ключ — на экране входа.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="cfg-base-url">Base URL (для Custom провайдера)</Label>
-            <Input
-              id="cfg-base-url"
-              value={baseUrl}
-              onChange={(e) => setBaseUrl(e.target.value)}
-              placeholder="https://api.example.com/v1"
-              className={inputCls}
-            />
-          </div>
+          {/* Base URL нужен только для провайдера Custom — для остальных скрыт */}
+          {getConfig().provider === 'custom' && (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="cfg-base-url">Base URL (свой OpenAI-совместимый сервер)</Label>
+              <Input
+                id="cfg-base-url"
+                value={baseUrl}
+                onChange={(e) => setBaseUrl(e.target.value)}
+                placeholder="https://api.example.com/v1"
+                className={inputCls}
+              />
+              <p className="text-label-sm text-[var(--md-sys-color-on-surface-variant)]">
+                Нужен только для провайдера Custom. Для Gemini и OpenAI адрес известен заранее.
+              </p>
+            </div>
+          )}
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="cfg-worker-url">Worker API URL</Label>
-            <Input
-              id="cfg-worker-url"
-              value={workerUrl}
-              onChange={(e) => setWorkerUrl(e.target.value)}
-              placeholder="https://ai-orchestrator-api.av-burshtein.workers.dev"
-              className={inputCls}
-            />
-            <p className="text-label-sm text-[var(--md-sys-color-on-surface-variant)]">
-              Адрес воркера API (*workers.dev), не сайта. Твой:{' '}
-              <code className="font-mono">ai-orchestrator-api.av-burshtein.workers.dev</code>
-            </p>
-          </div>
+          {/* Worker API URL в Settings не показывается: адрес зашит дефолтом
+              деплоя — DEFAULT_WORKER_URL в src/ui/lib/storage.ts */}
 
           {/* Jira — опционально, только для кнопки «В Jira» */}
           <div className="space-y-3 rounded-xl border border-[var(--md-sys-color-outline-variant)] bg-[var(--md-sys-color-surface-variant)] p-3">

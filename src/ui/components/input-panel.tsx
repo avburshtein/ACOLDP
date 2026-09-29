@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { BookOpen, ChevronDown, CloudUpload, FileText, Palette, PencilLine, Play, Send, Trash2 } from 'lucide-react';
+import { BookOpen, ChevronDown, CloudUpload, FileText, Palette, PencilLine, Play, Send, Trash2, TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -279,10 +279,13 @@ export function InputPanel({
         <span>лимит: {MAX_INPUT_CHARS.toLocaleString('ru-RU')}</span>
       </div>
       {value.length > TIMEOUT_WARN_CHARS && !overLimit && (
-        <p className="px-1 text-xs text-amber-600 dark:text-amber-400">
-          {noHanging(
-            `⚠ Большой вход (${TIMEOUT_WARN_CHARS.toLocaleString('ru-RU')} симв.) — генерация займёт больше времени, но ответ появится постепенно по мере готовности.`,
-          )}
+        <p className="flex items-start gap-1.5 px-1 text-xs text-amber-600 dark:text-amber-400">
+          <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+          <span>
+            {noHanging(
+              `Большой вход (${TIMEOUT_WARN_CHARS.toLocaleString('ru-RU')} симв.) — генерация займёт больше времени, но ответ появится постепенно по мере готовности.`,
+            )}
+          </span>
         </p>
       )}
 

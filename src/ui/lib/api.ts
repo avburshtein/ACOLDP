@@ -10,7 +10,7 @@ async function post<T>(workerUrl: string, payload: Record<string, unknown>): Pro
       body: JSON.stringify(payload),
     });
   } catch {
-    throw new Error('Нет соединения с Worker API. Проверь URL в ⚙️ Settings и подключение к сети.');
+    throw new Error('Нет соединения с Worker API. Проверь URL в Settings и подключение к сети.');
   }
 
   const raw = await res.text();
@@ -22,7 +22,7 @@ async function post<T>(workerUrl: string, payload: Record<string, unknown>): Pro
     const snippet = raw.trim().slice(0, 140) || '(пустой ответ)';
     throw new Error(
       `Worker вернул не-JSON (HTTP ${res.status}). Начало ответа: «${snippet}». ` +
-        'Проверь Worker API URL в ⚙️ Settings — там должен быть адрес воркера (*workers.dev), а не сайта.',
+        'Проверь Worker API URL в Settings — там должен быть адрес воркера (*workers.dev), а не сайта.',
     );
   }
 
@@ -151,7 +151,7 @@ export async function streamReport(
     // AbortError пробрасываем как есть — app.tsx различает abort по err.name
     if ((err as { name?: string } | null)?.name === 'AbortError') throw err;
     throw new Error(
-      'Нет соединения с Worker API. Проверь URL в ⚙️ Settings и подключение к сети.',
+      'Нет соединения с Worker API. Проверь URL в Settings и подключение к сети.',
     );
   }
 
@@ -167,7 +167,7 @@ export async function streamReport(
       const snippet = raw.trim().slice(0, 140) || '(пустой ответ)';
       throw new Error(
         `Worker вернул не-JSON (HTTP ${res.status}). Начало ответа: «${snippet}». ` +
-          'Проверь Worker API URL в ⚙️ Settings — там должен быть адрес воркера (*workers.dev), а не сайта.',
+          'Проверь Worker API URL в Settings — там должен быть адрес воркера (*workers.dev), а не сайта.',
       );
     }
     if (!res.ok) {
